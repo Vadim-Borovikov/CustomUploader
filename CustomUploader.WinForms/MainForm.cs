@@ -124,10 +124,13 @@ namespace CustomUploader
                 }
 
                 toolStripStatusLabel.Text = "Готов";
+                toolStripProgressBar.ProgressBar.Value = 100;
                 LockButtons(false);
 
                 if (failedFiles.Count == 0)
                 {
+                    MessageBox.Show("Все файлы загружены успешно", "OK", MessageBoxButtons.OK,
+                                    MessageBoxIcon.Information);
                     return;
                 }
 
@@ -139,7 +142,7 @@ namespace CustomUploader
                 }
                 sb.AppendLine();
                 sb.AppendLine("Попытаться загрузить их ещё раз?");
-                if (MessageBox.Show(sb.ToString(), "Ошибка", MessageBoxButtons.RetryCancel) != DialogResult.Retry)
+                if (MessageBox.Show(sb.ToString(), "Ошибка", MessageBoxButtons.RetryCancel, MessageBoxIcon.Question) != DialogResult.Retry)
                 {
                     return;
                 }
