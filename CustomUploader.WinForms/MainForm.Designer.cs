@@ -35,10 +35,10 @@
             this.buttonRemove = new System.Windows.Forms.Button();
             this.textBox = new System.Windows.Forms.TextBox();
             this.buttonUpload = new System.Windows.Forms.Button();
-            this.statusStrip1 = new System.Windows.Forms.StatusStrip();
+            this.statusStrip = new System.Windows.Forms.StatusStrip();
             this.toolStripStatusLabel = new System.Windows.Forms.ToolStripStatusLabel();
             this.toolStripProgressBar = new System.Windows.Forms.ToolStripProgressBar();
-            this.statusStrip1.SuspendLayout();
+            this.statusStrip.SuspendLayout();
             this.SuspendLayout();
             // 
             // label1
@@ -114,21 +114,21 @@
             this.buttonUpload.UseVisualStyleBackColor = true;
             this.buttonUpload.Click += new System.EventHandler(this.buttonUpload_Click);
             // 
-            // statusStrip1
+            // statusStrip
             // 
-            this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.statusStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.toolStripStatusLabel,
             this.toolStripProgressBar});
-            this.statusStrip1.Location = new System.Drawing.Point(0, 210);
-            this.statusStrip1.Name = "statusStrip1";
-            this.statusStrip1.Size = new System.Drawing.Size(284, 22);
-            this.statusStrip1.TabIndex = 7;
-            this.statusStrip1.Text = "statusStrip1";
+            this.statusStrip.Location = new System.Drawing.Point(0, 210);
+            this.statusStrip.Name = "statusStrip";
+            this.statusStrip.Size = new System.Drawing.Size(284, 22);
+            this.statusStrip.TabIndex = 7;
+            this.statusStrip.Text = "statusStrip";
             // 
             // toolStripStatusLabel
             // 
             this.toolStripStatusLabel.Name = "toolStripStatusLabel";
-            this.toolStripStatusLabel.Size = new System.Drawing.Size(167, 17);
+            this.toolStripStatusLabel.Size = new System.Drawing.Size(136, 17);
             this.toolStripStatusLabel.Spring = true;
             this.toolStripStatusLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
@@ -144,7 +144,7 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(284, 232);
-            this.Controls.Add(this.statusStrip1);
+            this.Controls.Add(this.statusStrip);
             this.Controls.Add(this.buttonUpload);
             this.Controls.Add(this.textBox);
             this.Controls.Add(this.buttonRemove);
@@ -155,8 +155,8 @@
             this.Name = "MainForm";
             this.Text = "Custom Uploader";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.MainForm_Closing);
-            this.statusStrip1.ResumeLayout(false);
-            this.statusStrip1.PerformLayout();
+            this.statusStrip.ResumeLayout(false);
+            this.statusStrip.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -171,7 +171,7 @@
         private System.Windows.Forms.Button buttonRemove;
         private System.Windows.Forms.TextBox textBox;
         private System.Windows.Forms.Button buttonUpload;
-        private System.Windows.Forms.StatusStrip statusStrip1;
+        private System.Windows.Forms.StatusStrip statusStrip;
         private System.Windows.Forms.ToolStripProgressBar toolStripProgressBar;
         private System.Windows.Forms.ToolStripStatusLabel toolStripStatusLabel;
     }

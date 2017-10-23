@@ -63,7 +63,7 @@ namespace CustomUploader
 
         private void buttonUpload_Click(object sender, EventArgs e)
         {
-            UploadFiles(textBox.Text, _files);
+            UploadFiles(textBox.Text, _files.ToList());
         }
 
         private void AddFiles(IEnumerable<string> files)
@@ -81,7 +81,7 @@ namespace CustomUploader
             listBox.Items.AddRange(_files.Select(x => x as object).ToArray());
         }
 
-        private async void UploadFiles(string name, IReadOnlyCollection<string> files)
+        private async void UploadFiles(string name, IList<string> files)
         {
             if (toolStripProgressBar.ProgressBar == null)
             {
@@ -105,21 +105,23 @@ namespace CustomUploader
 
             while (true)
             {
-                toolStripProgressBar.ProgressBar.Maximum = files.Count;
-                toolStripProgressBar.ProgressBar.Value = 0;
-
                 var failedFiles = new SortedSet<string>();
-                foreach (string file in files)
+                for (int i = 0; i < files.Count; ++i)
                 {
-                    toolStripStatusLabel.Text = $"Загружаю {Path.GetFileName(file)}...";
-                    bool success = await _provider.Upload(file, folderId, 10);
+                    string file = files[i];
+                    toolStripStatusLabel.Text = $"Загружаю {Path.GetFileName(file)} ({i + 1}/{files.Count})";
+
+                    toolStripProgressBar.ProgressBar.Value = 0;
+
+                    var progress = new Progress<float>(UpdateBar);
+                    bool success = await _provider.Upload(file, folderId, 10, progress);
                     if (!success)
                     {
                         failedFiles.Add(file);
                     }
-                    ++toolStripProgressBar.ProgressBar.Value;
                 }
 
+                toolStripStatusLabel.Text = "Готов";
                 if (failedFiles.Count == 0)
                 {
                     return;
@@ -137,7 +139,15 @@ namespace CustomUploader
                 {
                     return;
                 }
-                files = failedFiles;
+                files = failedFiles.ToList();
+            }
+        }
+
+        private void UpdateBar(float val)
+        {
+            if (val > 0)
+            {
+                toolStripProgressBar.Value = (int) Math.Round(val * 100);
             }
         }
 

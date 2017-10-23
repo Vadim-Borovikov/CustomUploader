@@ -70,7 +70,7 @@ namespace CustomUploader.LogicTests1
         {
             using (var provider = new GoogleApisDriveProvider("client_secret.json"))
             {
-                bool success = provider.Upload(path, FolderId, 10).Result;
+                bool success = provider.Upload(path, FolderId, 10, null).Result;
                 Assert.IsTrue(success);
             }
         }

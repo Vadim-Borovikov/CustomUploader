@@ -86,7 +86,7 @@ namespace CustomUploader.Logic
             return await _driveService.Files.Create(body).ExecuteAsync();
         }
 
-        public async Task<bool> Upload(string path, string parentId, int maxTries)
+        public async Task<bool> Upload(string path, string parentId, int maxTries, IProgress<float> progress)
         {
             if (!File.Exists(path))
             {
@@ -102,13 +102,18 @@ namespace CustomUploader.Logic
 
             using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read))
             {
+                float size = stream.Length;
                 FilesResource.CreateMediaUpload request =
                     _driveService.Files.Create(fileMetadata, stream, MimeMapping.GetMimeMapping(path));
                 request.Fields = "id";
 
-                IUploadProgress progress = await request.UploadAsync();
+                if (progress != null)
+                {
+                    request.ProgressChanged += p => progress.Report(p.BytesSent / size);
+                }
+                IUploadProgress uploadProgress = await request.UploadAsync();
                 int tries = 0;
-                while (progress.Status != UploadStatus.Completed)
+                while (uploadProgress.Status != UploadStatus.Completed)
                 {
                     ++tries;
                     if (tries >= maxTries)
