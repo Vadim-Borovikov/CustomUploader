@@ -100,6 +100,8 @@ namespace CustomUploader
                 return;
             }
 
+            LockButtons(true);
+
             toolStripStatusLabel.Text = $"Создаю папку {name}...";
             string folderId = await DataManager.CreateFolder(_provider, textBox.Text, _parentId);
 
@@ -122,6 +124,8 @@ namespace CustomUploader
                 }
 
                 toolStripStatusLabel.Text = "Готов";
+                LockButtons(false);
+
                 if (failedFiles.Count == 0)
                 {
                     return;
@@ -141,6 +145,13 @@ namespace CustomUploader
                 }
                 files = failedFiles.ToList();
             }
+        }
+
+        private void LockButtons(bool shouldLock)
+        {
+            buttonAdd.Enabled = !shouldLock;
+            buttonRemove.Enabled = !shouldLock;
+            buttonUpload.Enabled = !shouldLock;
         }
 
         private void UpdateBar(float val)
