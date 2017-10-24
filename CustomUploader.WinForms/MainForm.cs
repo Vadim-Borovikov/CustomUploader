@@ -29,6 +29,20 @@ namespace CustomUploader
             _dataManager.Dispose();
         }
 
+        private void listBox_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop, false))
+            {
+                e.Effect = DragDropEffects.All;
+            }
+        }
+
+        private void listBox_DragDrop(object sender, DragEventArgs e)
+        {
+            var files = (string[]) e.Data.GetData(DataFormats.FileDrop);
+            AddFiles(files);
+        }
+
         private void buttonAdd_Click(object sender, EventArgs e)
         {
             if (openFileDialog.ShowDialog() != DialogResult.OK)
@@ -36,13 +50,12 @@ namespace CustomUploader
                 return;
             }
 
-            _dataManager.AddFiles(openFileDialog.FileNames);
-            SyncListBox();
+            AddFiles(openFileDialog.FileNames);
         }
 
         private void buttonRemove_Click(object sender, EventArgs e)
         {
-            _dataManager.RemoveFiles(openFileDialog.FileNames);
+            _dataManager.RemoveFiles(listBox.SelectedItems.Cast<string>());
             SyncListBox();
         }
 
@@ -115,6 +128,12 @@ namespace CustomUploader
             }
 
             LockButtons(false);
+        }
+
+        private void AddFiles(IEnumerable<string> files)
+        {
+            _dataManager.AddFiles(files);
+            SyncListBox();
         }
 
         private void SyncListBox()
