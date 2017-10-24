@@ -16,85 +16,52 @@ namespace CustomUploader
             InitializeComponent();
 
             toolStripStatusLabel.Text = "Загрузка...";
-            string clientSecretPath = ConfigurationManager.AppSettings.Get("clientSecretPath");
-            _provider = new GoogleApisDriveProvider(clientSecretPath);
 
-            _parentId = ConfigurationManager.AppSettings.Get("parentId");
+            string clientSecretPath = ConfigurationManager.AppSettings.Get("clientSecretPath");
+            string parentId = ConfigurationManager.AppSettings.Get("parentId");
+            _dataManager = new DataManager(clientSecretPath, parentId);
+
             toolStripStatusLabel.Text = "Готов";
         }
 
         private void MainForm_Closing(object sender, FormClosingEventArgs e)
         {
-            _provider.Dispose();
-        }
-
-        private void listBox_DragEnter(object sender, DragEventArgs e)
-        {
-            MessageBox.Show("listBox_DragEnter!");
-            if (e.Data.GetDataPresent(DataFormats.FileDrop, false))
-            {
-                e.Effect = DragDropEffects.All;
-            }
-        }
-
-        private void listBox_DragDrop(object sender, DragEventArgs e)
-        {
-            MessageBox.Show("listBox_DragDrop!");
-            var files = (string[])e.Data.GetData(DataFormats.FileDrop);
-            AddFiles(files);
+            _dataManager.Dispose();
         }
 
         private void buttonAdd_Click(object sender, EventArgs e)
         {
-            if (openFileDialog.ShowDialog() == DialogResult.OK)
+            if (openFileDialog.ShowDialog() != DialogResult.OK)
             {
-                AddFiles(openFileDialog.FileNames);
+                return;
             }
+
+            _dataManager.AddFiles(openFileDialog.FileNames);
+            SyncListBox();
         }
 
         private void buttonRemove_Click(object sender, EventArgs e)
         {
-            foreach (string file in listBox.SelectedItems)
-            {
-                _files.Remove(file);
-            }
+            _dataManager.RemoveFiles(openFileDialog.FileNames);
             SyncListBox();
         }
 
-        private void buttonUpload_Click(object sender, EventArgs e)
-        {
-            UploadFiles(textBox.Text, _files.ToList());
-        }
-
-        private void AddFiles(IEnumerable<string> files)
-        {
-            foreach (string file in files)
-            {
-                _files.Add(file);
-            }
-            SyncListBox();
-        }
-
-        private void SyncListBox()
-        {
-            listBox.Items.Clear();
-            listBox.Items.AddRange(_files.Select(x => x as object).ToArray());
-        }
-
-        private async void UploadFiles(string name, IList<string> files)
+        private async void buttonUpload_Click(object sender, EventArgs e)
         {
             if (toolStripProgressBar.ProgressBar == null)
             {
                 throw new Exception("Progress bar error!");
             }
 
+            string name = textBox.Text;
             if (string.IsNullOrWhiteSpace(name))
             {
                 MessageBox.Show("Введите название!");
                 return;
             }
 
-            if (files.Count == 0)
+            List<string> fileNames = _dataManager.FileNames.ToList();
+            if (fileNames.Count == 0)
             {
                 MessageBox.Show("Выберите файлы для загрузки!");
                 return;
@@ -102,21 +69,22 @@ namespace CustomUploader
 
             LockButtons(true);
 
-            toolStripStatusLabel.Text = $"Создаю папку {name}...";
-            string folderId = await DataManager.CreateFolder(_provider, textBox.Text, _parentId);
+            toolStripStatusLabel.Text = $"Ищу/cоздаю папку {name}...";
+            string parentId = await _dataManager.GetOrCreateFolder(name);
+
+            var failedFiles = new SortedSet<string>();
 
             while (true)
             {
-                var failedFiles = new SortedSet<string>();
-                for (int i = 0; i < files.Count; ++i)
+                failedFiles.Clear();
+                for (int i = 0; i < fileNames.Count; ++i)
                 {
-                    string file = files[i];
-                    toolStripStatusLabel.Text = $"Загружаю {Path.GetFileName(file)} ({i + 1}/{files.Count})";
+                    string file = fileNames[i];
+                    toolStripStatusLabel.Text = $"Загружаю {Path.GetFileName(file)} ({i + 1}/{fileNames.Count})";
 
                     toolStripProgressBar.ProgressBar.Value = 0;
 
-                    var progress = new Progress<float>(UpdateBar);
-                    bool success = await _provider.Upload(file, folderId, 10, progress);
+                    bool success = await _dataManager.UploadFile(file, parentId, 10, UpdateBar);
                     if (!success)
                     {
                         failedFiles.Add(file);
@@ -124,14 +92,11 @@ namespace CustomUploader
                 }
 
                 toolStripStatusLabel.Text = "Готов";
-                toolStripProgressBar.ProgressBar.Value = 100;
-                LockButtons(false);
 
                 if (failedFiles.Count == 0)
                 {
-                    MessageBox.Show("Все файлы загружены успешно", "OK", MessageBoxButtons.OK,
-                                    MessageBoxIcon.Information);
-                    return;
+                    MessageBox.Show("Все файлы загружены успешно", "OK", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    break;
                 }
 
                 var sb = new StringBuilder();
@@ -144,10 +109,18 @@ namespace CustomUploader
                 sb.AppendLine("Попытаться загрузить их ещё раз?");
                 if (MessageBox.Show(sb.ToString(), "Ошибка", MessageBoxButtons.RetryCancel, MessageBoxIcon.Question) != DialogResult.Retry)
                 {
-                    return;
+                    break;
                 }
-                files = failedFiles.ToList();
+                fileNames = failedFiles.ToList();
             }
+
+            LockButtons(false);
+        }
+
+        private void SyncListBox()
+        {
+            listBox.Items.Clear();
+            listBox.Items.AddRange(_dataManager.FileNames.Select(x => x as object).ToArray());
         }
 
         private void LockButtons(bool shouldLock)
@@ -159,14 +132,12 @@ namespace CustomUploader
 
         private void UpdateBar(float val)
         {
-            if (val > 0)
+            if (val >= 0)
             {
-                toolStripProgressBar.Value = (int) Math.Round(val * 100);
+                toolStripProgressBar.Value = (int)Math.Round(val * 100);
             }
         }
 
-        private static string _parentId;
-        private readonly SortedSet<string> _files = new SortedSet<string>();
-        private readonly GoogleApisDriveProvider _provider;
+        private readonly DataManager _dataManager;
     }
 }

@@ -4,18 +4,17 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Web;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Drive.v3;
 using Google.Apis.Drive.v3.Data;
 using Google.Apis.Services;
 using Google.Apis.Upload;
 using Google.Apis.Util.Store;
-using File = System.IO.File;
+using File = Google.Apis.Drive.v3.Data.File;
 
 namespace CustomUploader.Logic
 {
-    public class GoogleApisDriveProvider : IDisposable
+    internal class GoogleApisDriveProvider : IDisposable
     {
         private readonly DriveService _driveService;
 
@@ -23,112 +22,97 @@ namespace CustomUploader.Logic
         private const string ApplicationName = "CustomUploader";
         private const string FolderType = "application/vnd.google-apps.folder";
 
-        public GoogleApisDriveProvider(string clientSecretJson)
+        internal GoogleApisDriveProvider(Stream clientSecretStream, string credentialPath, string user,
+                                         CancellationToken taskCancellationToken)
         {
-            UserCredential credential = CreateCredential(clientSecretJson);
+            GoogleClientSecrets secrets = GoogleClientSecrets.Load(clientSecretStream);
 
-            // Create Drive API service.
+            var credentialDataStore = new FileDataStore(credentialPath, true);
+
+            Task<UserCredential> credentialTask =
+                GoogleWebAuthorizationBroker.AuthorizeAsync(secrets.Secrets, Scopes, user, taskCancellationToken,
+                                                            credentialDataStore);
+
             var initializer = new BaseClientService.Initializer
             {
-                HttpClientInitializer = credential,
+                HttpClientInitializer = credentialTask.Result,
                 ApplicationName = ApplicationName
             };
+
             _driveService = new DriveService(initializer);
         }
 
-        private static UserCredential CreateCredential(string clientSecretJson)
+        public void Dispose()
         {
-            using (var stream = new FileStream(clientSecretJson, FileMode.Open, FileAccess.Read))
-            {
-                string folderPath = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
-                string credentialPath = Path.Combine(folderPath, ".credentials/drive-dotnet-quickstart.json");
-
-                GoogleClientSecrets secrets = GoogleClientSecrets.Load(stream);
-
-                var credentialDataStore = new FileDataStore(credentialPath, true);
-
-                Task<UserCredential> task =
-                    GoogleWebAuthorizationBroker.AuthorizeAsync(secrets.Secrets, Scopes, "user",
-                                                                CancellationToken.None, credentialDataStore);
-                return task.Result;
-            }
+            _driveService.Dispose();
         }
 
-        public List<Google.Apis.Drive.v3.Data.File> GetFolderIdsByName(string name, string parentId = null)
+        internal async Task<IEnumerable<string>> GetFoldersIds(string name, string parentId)
+        {
+            return await GetFilesIds(name, FolderType, parentId);
+        }
+
+        internal async Task<string> CreateFolder(string name, string parentId)
+        {
+            var body = new File
+            {
+                Name = name,
+                MimeType = FolderType,
+                Parents = new List<string> { parentId }
+            };
+            FilesResource.CreateRequest createRequest = _driveService.Files.Create(body);
+
+            File result = await createRequest.ExecuteAsync();
+
+            return result.Id;
+        }
+
+        internal async Task<bool> UploadFile(string name, string mimeType, string parentId, Stream fileStream,
+                                             IProgress<long> progress, Func<int, bool> shouldAbort)
+        {
+            var fileMetadata = new File
+            {
+                Name = name,
+                MimeType = mimeType,
+                Parents = new List<string> { parentId }
+            };
+            FilesResource.CreateMediaUpload request =
+                _driveService.Files.Create(fileMetadata, fileStream, fileMetadata.MimeType);
+            request.Fields = "id";
+            if (progress != null)
+            {
+                request.ProgressChanged += u => progress.Report(u.BytesSent);
+            }
+
+            IUploadProgress uploadProgress = await request.UploadAsync();
+
+            int currentTry = 0;
+            while (uploadProgress.Status != UploadStatus.Completed)
+            {
+                if (!shouldAbort(currentTry))
+                {
+                    return false;
+                }
+                ++currentTry;
+                await request.ResumeAsync();
+            }
+            return true;
+        }
+
+        private async Task<IEnumerable<string>> GetFilesIds(string name, string mimeType, string parentId)
         {
             FilesResource.ListRequest request = _driveService.Files.List();
-            request.Q = $"mimeType='{FolderType}' and name contains '{name}' and trashed = false";
+            request.Q = $"name contains '{name}' and mimeType='{mimeType}' and trashed = false";
             if (parentId != null)
             {
                 request.Q += $" and '{parentId}' in parents";
             }
             request.PageSize = 10;
             request.Fields = "nextPageToken, files(id, name)";
-            FileList result = request.Execute();
-            return result.Files.Where(f => f.Name == name).ToList();
-        }
 
-        public async Task<Google.Apis.Drive.v3.Data.File> CreateFolder(string name, string parentId)
-        {
-            List<Google.Apis.Drive.v3.Data.File> files = GetFolderIdsByName(name, parentId);
-            if (files.Count == 1)
-            {
-                return files[0];
-            }
+            FileList result = await request.ExecuteAsync();
 
-            var body = new Google.Apis.Drive.v3.Data.File
-            {
-                Name = name,
-                MimeType = FolderType,
-                Parents = new List<string> { parentId }
-            };
-
-            return await _driveService.Files.Create(body).ExecuteAsync();
-        }
-
-        public async Task<bool> Upload(string path, string parentId, int maxTries, IProgress<float> progress)
-        {
-            if (!File.Exists(path))
-            {
-                return false;
-            }
-
-            var fileMetadata = new Google.Apis.Drive.v3.Data.File
-            {
-                Name = Path.GetFileName(path),
-                MimeType = MimeMapping.GetMimeMapping(path),
-                Parents = new List<string> { parentId }
-            };
-
-            using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read))
-            {
-                float size = stream.Length;
-                FilesResource.CreateMediaUpload request =
-                    _driveService.Files.Create(fileMetadata, stream, MimeMapping.GetMimeMapping(path));
-                request.Fields = "id";
-
-                if (progress != null)
-                {
-                    request.ProgressChanged += p => progress.Report(p.BytesSent / size);
-                }
-                IUploadProgress uploadProgress = await request.UploadAsync();
-                int tries = 0;
-                while (uploadProgress.Status != UploadStatus.Completed)
-                {
-                    ++tries;
-                    if (tries >= maxTries)
-                    {
-                        return false;
-                    }
-                    await request.ResumeAsync();
-                }
-                return true;
-            }
-        }
-
-        public void Dispose()
-        {
-            _driveService.Dispose();
+            return result.Files.Where(f => f.Name == name).Select(f => f.Id);
         }
     }
 }
