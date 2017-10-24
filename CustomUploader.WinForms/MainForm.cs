@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using CustomUploader.Logic;
 
@@ -63,11 +64,6 @@ namespace CustomUploader
         {
             _dataManager.ShouldCancel = false;
 
-            if (toolStripProgressBar.ProgressBar == null)
-            {
-                throw new Exception("Progress bar error!");
-            }
-
             string name = textBox.Text;
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -98,14 +94,7 @@ namespace CustomUploader
                             break;
                         }
 
-                        string file = fileNames[i];
-                        toolStripStatusLabel.Text = $"Загружаю {Path.GetFileName(file)} ({i + 1}/{fileNames.Count})";
-
-                        toolStripProgressBar.ProgressBar.Value = 0;
-
-                        bool success = await _dataManager.UploadFile(file, parentId, 10, UpdateBar);
-                        _dataManager.FileStatuses[file] = success;
-                        SyncListBox();
+                        await UploadFile(parentId, fileNames, i);
                     }
                 }
 
@@ -131,6 +120,18 @@ namespace CustomUploader
             }
 
             LockButtons(false);
+        }
+
+        private async Task UploadFile(string parentId, IReadOnlyList<string> fileNames, int index)
+        {
+            string file = fileNames[index];
+            toolStripStatusLabel.Text = $"Загружаю {Path.GetFileName(file)} ({index + 1}/{fileNames.Count})";
+
+            toolStripProgressBar.Value = 0;
+
+            bool success = await _dataManager.UploadFile(file, parentId, 10, UpdateBar);
+            _dataManager.FileStatuses[file] = success;
+            SyncListBox();
         }
 
         private void buttonCancel_Click(object sender, EventArgs e)
