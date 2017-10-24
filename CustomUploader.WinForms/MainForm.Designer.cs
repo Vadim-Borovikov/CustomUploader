@@ -38,6 +38,7 @@
             this.statusStrip = new System.Windows.Forms.StatusStrip();
             this.toolStripStatusLabel = new System.Windows.Forms.ToolStripStatusLabel();
             this.toolStripProgressBar = new System.Windows.Forms.ToolStripProgressBar();
+            this.buttonCancel = new System.Windows.Forms.Button();
             this.statusStrip.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -105,8 +106,8 @@
             // 
             // buttonUpload
             // 
-            this.buttonUpload.Anchor = System.Windows.Forms.AnchorStyles.Bottom;
-            this.buttonUpload.Location = new System.Drawing.Point(107, 181);
+            this.buttonUpload.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.buttonUpload.Location = new System.Drawing.Point(12, 181);
             this.buttonUpload.Name = "buttonUpload";
             this.buttonUpload.Size = new System.Drawing.Size(75, 23);
             this.buttonUpload.TabIndex = 6;
@@ -128,7 +129,7 @@
             // toolStripStatusLabel
             // 
             this.toolStripStatusLabel.Name = "toolStripStatusLabel";
-            this.toolStripStatusLabel.Size = new System.Drawing.Size(136, 17);
+            this.toolStripStatusLabel.Size = new System.Drawing.Size(167, 17);
             this.toolStripStatusLabel.Spring = true;
             this.toolStripStatusLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
@@ -139,11 +140,23 @@
             this.toolStripProgressBar.Size = new System.Drawing.Size(100, 16);
             this.toolStripProgressBar.Style = System.Windows.Forms.ProgressBarStyle.Continuous;
             // 
+            // buttonCancel
+            // 
+            this.buttonCancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.buttonCancel.Location = new System.Drawing.Point(196, 181);
+            this.buttonCancel.Name = "buttonCancel";
+            this.buttonCancel.Size = new System.Drawing.Size(75, 23);
+            this.buttonCancel.TabIndex = 8;
+            this.buttonCancel.Text = "Отменить";
+            this.buttonCancel.UseVisualStyleBackColor = true;
+            this.buttonCancel.Click += new System.EventHandler(this.buttonCancel_Click);
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(284, 232);
+            this.Controls.Add(this.buttonCancel);
             this.Controls.Add(this.statusStrip);
             this.Controls.Add(this.buttonUpload);
             this.Controls.Add(this.textBox);
@@ -174,6 +187,7 @@
         private System.Windows.Forms.StatusStrip statusStrip;
         private System.Windows.Forms.ToolStripProgressBar toolStripProgressBar;
         private System.Windows.Forms.ToolStripStatusLabel toolStripStatusLabel;
+        private System.Windows.Forms.Button buttonCancel;
     }
 }
 

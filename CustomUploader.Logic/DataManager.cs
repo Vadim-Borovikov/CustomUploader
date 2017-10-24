@@ -12,7 +12,9 @@ namespace CustomUploader.Logic
     {
         public DataManager(string clientSecretJson, string parentId)
         {
-            FileNames = new SortedSet<string>();
+            FileStatuses = new Dictionary<string, bool>();
+            ShouldCancel = false;
+
             _parentId = parentId;
 
             using (var stream = new FileStream(clientSecretJson, FileMode.Open, FileAccess.Read))
@@ -33,7 +35,7 @@ namespace CustomUploader.Logic
         {
             foreach (string file in fileNames)
             {
-                FileNames.Add(file);
+                FileStatuses.Add(file, false);
             }
         }
 
@@ -41,8 +43,13 @@ namespace CustomUploader.Logic
         {
             foreach (string file in fileNames)
             {
-                FileNames.Remove(file);
+                FileStatuses.Remove(file);
             }
+        }
+
+        public List<string> GetFailedFiles()
+        {
+            return FileStatuses.Where(p => !p.Value).Select(p => p.Key).ToList();
         }
 
         public async Task<string> GetOrCreateFolder(string name)
@@ -73,11 +80,18 @@ namespace CustomUploader.Logic
                 long size = stream.Length;
                 var progress = new Progress<long>(bytesSent => HandleProgress(bytesSent, size, progressHandler));
 
-                Func<int, bool> shouldAbort = currentTry => currentTry >= maxTries;
+                Func<int, bool> shouldAbort = currentTry => ShouldAbort(currentTry, maxTries);
 
                 return await _provider.UploadFile(name, mimeType, parentId, stream, progress, shouldAbort);
             }
         }
+
+        private bool ShouldAbort(int currentTry, int maxTries)
+        {
+            return ShouldCancel || (currentTry >= maxTries);
+        }
+
+        public bool ShouldCancel;
 
         private static void HandleProgress(long bytesSent, long size, Action<float> progressHandler)
         {
@@ -90,7 +104,7 @@ namespace CustomUploader.Logic
         }
 
         private readonly string _parentId;
-        public readonly SortedSet<string> FileNames;
+        public readonly Dictionary<string, bool> FileStatuses;
         private readonly GoogleApisDriveProvider _provider;
     }
 }
