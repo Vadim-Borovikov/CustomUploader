@@ -4,49 +4,57 @@ using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows.Forms;
+using System.Windows;
 using CustomUploader.Logic;
+using Microsoft.Win32;
 
-namespace CustomUploader
+namespace CustomUploader.WPF
 {
-    internal partial class MainForm : Form
+    /// <summary>
+    /// Interaction logic for MainWindow.xaml
+    /// </summary>
+    internal partial class MainWindow
     {
-        public MainForm()
+        public MainWindow()
         {
             InitializeComponent();
 
-            toolStripStatusLabel.Text = "Загрузка...";
+            Status.Content = "Загрузка...";
 
             string clientSecretPath = ConfigurationManager.AppSettings.Get("clientSecretPath");
             string parentId = ConfigurationManager.AppSettings.Get("parentId");
             _dataManager = new DataManager(clientSecretPath, parentId);
 
             LockButtons(false);
-            toolStripStatusLabel.Text = "Готов";
+            Status.Content = "Готов";
         }
 
-        private void MainForm_Closing(object sender, FormClosingEventArgs e)
+        private void WindowClosing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             _dataManager.Dispose();
         }
 
-        private void listBox_DragEnter(object sender, DragEventArgs e)
+        private void ListBoxDragEnter(object sender, DragEventArgs e)
         {
             if (e.Data.GetDataPresent(DataFormats.FileDrop, false))
             {
-                e.Effect = DragDropEffects.All;
+                e.Effects = DragDropEffects.All;
             }
         }
 
-        private void listBox_DragDrop(object sender, DragEventArgs e)
+        private void ListBoxDrop(object sender, DragEventArgs e)
         {
-            var files = (string[]) e.Data.GetData(DataFormats.FileDrop);
+            var files = (string[])e.Data.GetData(DataFormats.FileDrop);
             AddFiles(files);
         }
 
-        private void buttonAdd_Click(object sender, EventArgs e)
+        private void ButtonAdd_Click(object sender, RoutedEventArgs e)
         {
-            if (openFileDialog.ShowDialog() != DialogResult.OK)
+            var openFileDialog = new OpenFileDialog
+            {
+                Multiselect = true
+            };
+            if (openFileDialog.ShowDialog() != true)
             {
                 return;
             }
@@ -54,17 +62,18 @@ namespace CustomUploader
             AddFiles(openFileDialog.FileNames);
         }
 
-        private void buttonRemove_Click(object sender, EventArgs e)
+        private void ButtonClear_Click(object sender, RoutedEventArgs e)
         {
-            _dataManager.RemoveFiles(listBox.SelectedItems.Cast<string>());
+            _dataManager.FileStatuses.Clear();
             SyncListBox();
+            TextBox.Text = "";
         }
 
-        private async void buttonUpload_Click(object sender, EventArgs e)
+        private async void ButtonUpload_Click(object sender, RoutedEventArgs e)
         {
             _dataManager.ShouldCancel = false;
 
-            string name = textBox.Text;
+            string name = TextBox.Text;
             if (string.IsNullOrWhiteSpace(name))
             {
                 MessageBox.Show("Введите название!");
@@ -80,7 +89,7 @@ namespace CustomUploader
 
             LockButtons(true);
 
-            toolStripStatusLabel.Text = $"Ищу/cоздаю папку {name}";
+            Status.Content = $"Ищу/cоздаю папку {name}";
             string parentId = await _dataManager.GetOrCreateFolder(name);
 
             while (true)
@@ -98,47 +107,43 @@ namespace CustomUploader
                     }
                 }
 
-                toolStripStatusLabel.Text = "Готов";
+                Status.Content = "Готов";
 
                 fileNames = _dataManager.GetFailedFiles();
                 if (fileNames.Count == 0)
                 {
-                    MessageBox.Show("Все файлы загружены успешно", "OK", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("Все файлы загружены успешно", "OK", MessageBoxButton.OK, MessageBoxImage.Information);
                     break;
                 }
 
                 if (MessageBox.Show("Некоторые файлы загрузить не удалось. Попытаться загрузить их ещё раз?", "Ошибка",
-                                    MessageBoxButtons.RetryCancel, MessageBoxIcon.Question) != DialogResult.Retry)
+                                    MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
                 {
                     break;
                 }
 
                 _dataManager.RemoveFiles(_dataManager.FileStatuses.Keys.Except(fileNames).ToList());
                 _dataManager.ShouldCancel = false;
-                buttonCancel.Enabled = true;
+                ButtonCancel.IsEnabled = true;
                 SyncListBox();
             }
 
             LockButtons(false);
         }
 
-        private async Task UploadFile(string parentId, IReadOnlyList<string> fileNames, int index)
-        {
-            string file = fileNames[index];
-            toolStripStatusLabel.Text = $"Загружаю {Path.GetFileName(file)} ({index + 1}/{fileNames.Count})";
-
-            toolStripProgressBar.Value = 0;
-
-            bool success = await _dataManager.UploadFile(file, parentId, 10, UpdateBar);
-            _dataManager.FileStatuses[file] = success;
-            SyncListBox();
-        }
-
-        private void buttonCancel_Click(object sender, EventArgs e)
+        private void ButtonCancel_Click(object sender, RoutedEventArgs e)
         {
             _dataManager.ShouldCancel = true;
-            toolStripStatusLabel.Text += ". Отменяю...";
-            buttonCancel.Enabled = false;
+            Status.Content += ". Отменяю...";
+            ButtonCancel.IsEnabled = false;
+        }
+
+        private void LockButtons(bool shouldLock)
+        {
+            ButtonAdd.IsEnabled = !shouldLock;
+            ButtonClear.IsEnabled = !shouldLock;
+            ButtonUpload.IsEnabled = !shouldLock;
+            ButtonCancel.IsEnabled = shouldLock;
         }
 
         private void AddFiles(IEnumerable<string> files)
@@ -149,27 +154,31 @@ namespace CustomUploader
 
         private void SyncListBox()
         {
-            listBox.Items.Clear();
+            ListBox.Items.Clear();
             foreach (string file in _dataManager.FileStatuses.Keys)
             {
                 string prefix = _dataManager.FileStatuses[file] ? SuccessPrefix : DefaultPrefix;
-                listBox.Items.Add($"{prefix}{file}");
+                ListBox.Items.Add($"{prefix}{file}");
             }
         }
 
-        private void LockButtons(bool shouldLock)
+        private async Task UploadFile(string parentId, IReadOnlyList<string> fileNames, int index)
         {
-            buttonAdd.Enabled = !shouldLock;
-            buttonRemove.Enabled = !shouldLock;
-            buttonUpload.Enabled = !shouldLock;
-            buttonCancel.Enabled = shouldLock;
+            string file = fileNames[index];
+            Status.Content = $"Загружаю {Path.GetFileName(file)} ({index + 1}/{fileNames.Count})";
+
+            ProgressBar.Value = 0;
+
+            bool success = await _dataManager.UploadFile(file, parentId, 10, UpdateBar);
+            _dataManager.FileStatuses[file] = success;
+            SyncListBox();
         }
 
         private void UpdateBar(float val)
         {
             if (val >= 0)
             {
-                toolStripProgressBar.Value = (int)Math.Round(val * 100);
+                ProgressBar.Value = (int)Math.Round(val * 100);
             }
         }
 
