@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace CustomUploader.WPF.Properties
+namespace CustomUploader.Properties
 {
 
 

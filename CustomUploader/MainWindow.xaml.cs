@@ -8,7 +8,7 @@ using System.Windows.Controls;
 using CustomUploader.Logic;
 using Microsoft.Win32;
 
-namespace CustomUploader.WPF
+namespace CustomUploader
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
