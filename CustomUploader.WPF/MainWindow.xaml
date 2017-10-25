@@ -4,30 +4,28 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="Custom Uploader" Height="310" Width="300" MinHeight="310" MinWidth="300" x:ClassModifier="internal" Closing="WindowClosing">
+        Title="Custom Uploader" Height="310" Width="300" MinHeight="310" MinWidth="300" x:ClassModifier="internal" Closing="WindowClosing" ScrollViewer.CanContentScroll="True">
     <Grid>
         <Label Content="Название" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top"/>
         <TextBox Name="TextBox" Height="23" Margin="78,12,10,0" TextWrapping="Wrap" VerticalAlignment="Top"/>
-        <ListBox Name="ListBox" Margin="10,41,10,82" AllowDrop="True" DragEnter="ListBoxDragEnter" Drop="ListBoxDrop"/>
+        <ScrollViewer Margin="10,41,10,82" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+            <StackPanel Name="StackPanel" AllowDrop="True" DragEnter="StackPanelDragEnter" Drop="StackPanelDrop">
+                <!--Grid Width="Auto">
+                    <ProgressBar/>
+                    <TextBlock Text="12345" Margin="2,2,2,2" VerticalAlignment="Center"/>
+                </>
+                <Grid Width="Auto">
+                    <ProgressBar/>
+                    <TextBlock Text="67890" Margin="2,2,2,2" VerticalAlignment="Center"/>
+                </Grid-->
+            </StackPanel>
+        </ScrollViewer>
         <Button Name="ButtonAdd" Content="Добавить" HorizontalAlignment="Left" Margin="10,0,0,55" VerticalAlignment="Bottom" Width="75" Click="ButtonAdd_Click"/>
         <Button Name="ButtonClear" Content="Очистить" Margin="0,0,10,55" HorizontalAlignment="Right" Width="75" Height="22" VerticalAlignment="Bottom" Click="ButtonClear_Click"/>
         <Button Name="ButtonUpload" Content="Закачать" HorizontalAlignment="Left" Margin="10,0,0,28" Width="75" Height="22" VerticalAlignment="Bottom" Click="ButtonUpload_Click"/>
         <Button Name="ButtonCancel" Content="Отменить" Margin="0,0,10,28" HorizontalAlignment="Right" Width="75" Height="22" VerticalAlignment="Bottom" IsCancel="True" Click="ButtonCancel_Click"/>
         <StatusBar  Height="23" VerticalAlignment="Bottom">
-            <StatusBar.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="110"/>
-                        </Grid.ColumnDefinitions>
-                    </Grid>
-                </ItemsPanelTemplate>
-            </StatusBar.ItemsPanel>
             <StatusBarItem Name="Status" Content=""/>
-            <StatusBarItem Grid.Column="1">
-                <ProgressBar Name="ProgressBar" Height="15" Width="100"/>
-            </StatusBarItem>
         </StatusBar>
     </Grid>
 </Window>

@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using CustomUploader.Logic;
 using Microsoft.Win32;
 
@@ -34,7 +34,7 @@ namespace CustomUploader.WPF
             _dataManager.Dispose();
         }
 
-        private void ListBoxDragEnter(object sender, DragEventArgs e)
+        private void StackPanelDragEnter(object sender, DragEventArgs e)
         {
             if (e.Data.GetDataPresent(DataFormats.FileDrop, false))
             {
@@ -42,7 +42,7 @@ namespace CustomUploader.WPF
             }
         }
 
-        private void ListBoxDrop(object sender, DragEventArgs e)
+        private void StackPanelDrop(object sender, DragEventArgs e)
         {
             var files = (string[])e.Data.GetData(DataFormats.FileDrop);
             AddFiles(files);
@@ -65,7 +65,7 @@ namespace CustomUploader.WPF
         private void ButtonClear_Click(object sender, RoutedEventArgs e)
         {
             _dataManager.FileStatuses.Clear();
-            SyncListBox();
+            SyncStackPanel();
             TextBox.Text = "";
         }
 
@@ -125,7 +125,7 @@ namespace CustomUploader.WPF
                 _dataManager.RemoveFiles(_dataManager.FileStatuses.Keys.Except(fileNames).ToList());
                 _dataManager.ShouldCancel = false;
                 ButtonCancel.IsEnabled = true;
-                SyncListBox();
+                SyncStackPanel();
             }
 
             LockButtons(false);
@@ -149,41 +149,64 @@ namespace CustomUploader.WPF
         private void AddFiles(IEnumerable<string> files)
         {
             _dataManager.AddFiles(files);
-            SyncListBox();
+            SyncStackPanel();
         }
 
-        private void SyncListBox()
+        private void SyncStackPanel()
         {
-            ListBox.Items.Clear();
-            foreach (string file in _dataManager.FileStatuses.Keys)
+            StackPanel.Children.RemoveRange(0, StackPanel.Children.Count);
+
+            foreach (Grid grid in _dataManager.FileStatuses.Keys.Select(CreateElement))
             {
-                string prefix = _dataManager.FileStatuses[file] ? SuccessPrefix : DefaultPrefix;
-                ListBox.Items.Add($"{prefix}{file}");
+                StackPanel.Children.Add(grid);
             }
         }
 
         private async Task UploadFile(string parentId, IReadOnlyList<string> fileNames, int index)
         {
             string file = fileNames[index];
-            Status.Content = $"Загружаю {Path.GetFileName(file)} ({index + 1}/{fileNames.Count})";
-
-            ProgressBar.Value = 0;
-
+            Status.Content = $"Загружаю файлы ({index + 1}/{fileNames.Count})";
+            _currentProgressBar = GetProgressBar(file);
             bool success = await _dataManager.UploadFile(file, parentId, 10, UpdateBar);
             _dataManager.FileStatuses[file] = success;
-            SyncListBox();
+            _currentProgressBar.Value = success ? 100 : 0;
         }
 
         private void UpdateBar(float val)
         {
-            if (val >= 0)
-            {
-                ProgressBar.Value = (int)Math.Round(val * 100);
-            }
+            _currentProgressBar.Value = (int)Math.Round(val * 100);
         }
 
+        private static Grid CreateElement(string name)
+        {
+            var grid = new Grid
+            {
+                Width = double.NaN
+            };
+
+            var progressBar = new ProgressBar();
+
+            var textBlock = new TextBlock
+            {
+                Text = name,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(2.0)
+            };
+
+            grid.Children.Add(progressBar);
+            grid.Children.Add(textBlock);
+            return grid;
+        }
+
+        private ProgressBar GetProgressBar(string fileName)
+        {
+            return
+                StackPanel.Children.Cast<Grid>().Where(grid => ((TextBlock) grid.Children[1]).Text == fileName)
+                                                .Select(grid => (ProgressBar) grid.Children[0])
+                                                .FirstOrDefault();
+        }
+
+        private ProgressBar _currentProgressBar;
         private readonly DataManager _dataManager;
-        private const string SuccessPrefix = "[Загружен] ";
-        private const string DefaultPrefix = "[Не загружен] ";
     }
 }
