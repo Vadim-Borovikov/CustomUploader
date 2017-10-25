@@ -33,7 +33,7 @@ namespace CustomUploader.Logic
 
         public void AddFiles(IEnumerable<string> fileNames)
         {
-            foreach (string file in fileNames)
+            foreach (string file in fileNames.Where(file => !FileStatuses.ContainsKey(file)))
             {
                 FileStatuses.Add(file, false);
             }
