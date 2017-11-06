@@ -34,11 +34,6 @@ namespace CustomUploader
             _dataManager.Dispose();
         }
 
-        private void ScrollViewerDragEnter(object sender, DragEventArgs e)
-        {
-            e.Effects = DragDropEffects.None;
-        }
-
         private void ScrollViewerDrop(object sender, DragEventArgs e)
         {
             var files = (string[])e.Data.GetData(DataFormats.FileDrop);
@@ -157,9 +152,16 @@ namespace CustomUploader
                 return;
             }
 
+            List<FileInfo> files = directoryInfo.EnumerateFiles().ToList();
+            if (!files.Any())
+            {
+                MessageBox.Show($"Папка {directoryInfo.FullName} не содержит файлов!");
+                return;
+            }
+
             TextBoxPath.Text = directoryInfo.Parent?.FullName ?? "";
             TextBoxName.Text = directoryInfo.Name;
-            _dataManager.AddFiles(directoryInfo.EnumerateFiles());
+            _dataManager.AddFiles(files);
             SyncStackPanel();
         }
 
@@ -167,7 +169,7 @@ namespace CustomUploader
         {
             StackPanel.Children.RemoveRange(0, StackPanel.Children.Count);
 
-            foreach (Grid grid in _dataManager.FileStatuses.Keys.Select(f => CreateElement(f.Name)))
+            foreach (Grid grid in _dataManager.FileStatuses.Keys.Select(f => f.Name).OrderBy(n => n).Select(CreateElement))
             {
                 StackPanel.Children.Add(grid);
             }

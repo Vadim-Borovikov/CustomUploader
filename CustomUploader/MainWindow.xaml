@@ -7,12 +7,12 @@
         Title="Custom Uploader" Height="310" Width="300" MinHeight="310" MinWidth="300" x:ClassModifier="internal" Closing="WindowClosing" ScrollViewer.CanContentScroll="True">
     <Grid>
         <Label Content="Путь" HorizontalAlignment="Left" Margin="38,12,0,0" VerticalAlignment="Top"/>
-        <TextBox Name="TextBoxPath" Height="23" Margin="78,12,90,0" TextWrapping="Wrap" VerticalAlignment="Top" IsEnabled="False"/>
+        <TextBox Name="TextBoxPath" Height="23" Margin="78,12,90,0" VerticalAlignment="Top" IsEnabled="False" MaxLines="1"/>
         <Button Name="ButtonSet" Content="Задать" Margin="0,12,10,0" VerticalAlignment="Top" Click="ButtonSet_Click" HorizontalAlignment="Right" Width="75"/>
         <Label Content="Название" HorizontalAlignment="Left" Margin="10,38,0,0" VerticalAlignment="Top"/>
-        <TextBox x:Name="TextBoxName" Height="23" Margin="78,40,90,0" TextWrapping="Wrap" VerticalAlignment="Top" IsEnabled="False"/>
+        <TextBox x:Name="TextBoxName" Height="23" Margin="78,40,90,0" VerticalAlignment="Top" IsEnabled="False" MaxLines="1"/>
         <Button Name="ButtonClear" Content="Очистить" Margin="0,40,10,0" HorizontalAlignment="Right" Width="75" Click="ButtonClear_Click" Height="22" VerticalAlignment="Top"/>
-        <ScrollViewer Margin="10,69,10,55" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" AllowDrop="True" DragEnter="ScrollViewerDragEnter" Drop="ScrollViewerDrop">
+        <ScrollViewer Margin="10,69,10,55" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" AllowDrop="True" Drop="ScrollViewerDrop">
             <StackPanel Name="StackPanel">
                 <!--Grid Width="Auto">
                     <ProgressBar/>
