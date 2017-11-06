@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using CustomUploader.Logic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -55,7 +56,7 @@ namespace CustomUploader.Tests
         {
             using (var provider = new DataManager("client_secret.json", ParentFolderId))
             {
-                bool success = provider.UploadFile(path, FolderId, 10, null).Result;
+                bool success = provider.UploadFile(new FileInfo(path), FolderId, 10, null).Result;
                 Assert.IsTrue(success);
             }
         }

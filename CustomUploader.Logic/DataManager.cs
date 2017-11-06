@@ -12,7 +12,7 @@ namespace CustomUploader.Logic
     {
         public DataManager(string clientSecretJson, string parentId)
         {
-            FileStatuses = new Dictionary<string, bool>();
+            FileStatuses = new Dictionary<FileInfo, bool>();
             ShouldCancel = false;
 
             _parentId = parentId;
@@ -31,23 +31,23 @@ namespace CustomUploader.Logic
             _provider.Dispose();
         }
 
-        public void AddFiles(IEnumerable<string> fileNames)
+        public void AddFiles(IEnumerable<FileInfo> files)
         {
-            foreach (string file in fileNames.Where(file => !FileStatuses.ContainsKey(file)))
+            foreach (FileInfo file in files.Where(f => !FileStatuses.ContainsKey(f)))
             {
                 FileStatuses.Add(file, false);
             }
         }
 
-        public void RemoveFiles(IEnumerable<string> fileNames)
+        public void RemoveFiles(IEnumerable<FileInfo> files)
         {
-            foreach (string file in fileNames)
+            foreach (FileInfo file in files)
             {
                 FileStatuses.Remove(file);
             }
         }
 
-        public List<string> GetFailedFiles()
+        public List<FileInfo> GetFailedFiles()
         {
             return FileStatuses.Where(p => !p.Value).Select(p => p.Key).ToList();
         }
@@ -65,24 +65,23 @@ namespace CustomUploader.Logic
             return await _provider.CreateFolder(name, _parentId);
         }
 
-        public async Task<bool> UploadFile(string path, string parentId, int maxTries, Action<float> progressHandler)
+        public async Task<bool> UploadFile(FileInfo file, string parentId, int maxTries, Action<float> progressHandler)
         {
-            if (!File.Exists(path))
+            if (!file.Exists)
             {
                 return false;
             }
 
-            using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read))
+            using (FileStream stream = file.Open(FileMode.Open, FileAccess.Read))
             {
-                string name = Path.GetFileName(path);
-                string mimeType = MimeMapping.GetMimeMapping(path);
+                string mimeType = MimeMapping.GetMimeMapping(file.FullName);
 
                 long size = stream.Length;
                 var progress = new Progress<long>(bytesSent => HandleProgress(bytesSent, size, progressHandler));
 
                 Func<int, bool> shouldAbort = currentTry => ShouldAbort(currentTry, maxTries);
 
-                return await _provider.UploadFile(name, mimeType, parentId, stream, progress, shouldAbort);
+                return await _provider.UploadFile(file.Name, mimeType, parentId, stream, progress, shouldAbort);
             }
         }
 
@@ -104,7 +103,7 @@ namespace CustomUploader.Logic
         }
 
         private readonly string _parentId;
-        public readonly Dictionary<string, bool> FileStatuses;
+        public readonly Dictionary<FileInfo, bool> FileStatuses;
         private readonly GoogleApisDriveProvider _provider;
     }
 }

@@ -47,11 +47,7 @@ namespace CustomUploader
                 return;
             }
 
-            string path = files[0];
-            if (Directory.Exists(path))
-            {
-                AddFolder(path);
-            }
+            AddFolder(files[0]);
         }
 
         private void ButtonSet_Click(object sender, RoutedEventArgs e)
@@ -72,22 +68,23 @@ namespace CustomUploader
         {
             _dataManager.FileStatuses.Clear();
             SyncStackPanel();
-            TextBox.Text = "";
+            TextBoxPath.Text = "";
+            TextBoxName.Text = "";
         }
 
         private async void ButtonUpload_Click(object sender, RoutedEventArgs e)
         {
             _dataManager.ShouldCancel = false;
 
-            string name = Path.GetFileName(TextBox.Text);
+            string name = TextBoxName.Text;
             if (string.IsNullOrWhiteSpace(name))
             {
                 MessageBox.Show("Введите название!");
                 return;
             }
 
-            List<string> fileNames = _dataManager.FileStatuses.Keys.ToList();
-            if (fileNames.Count == 0)
+            List<FileInfo> files = _dataManager.FileStatuses.Keys.ToList();
+            if (files.Count == 0)
             {
                 MessageBox.Show("Выберите файлы для загрузки!");
                 return;
@@ -102,21 +99,21 @@ namespace CustomUploader
             {
                 if (!_dataManager.ShouldCancel)
                 {
-                    for (int i = 0; i < fileNames.Count; ++i)
+                    for (int i = 0; i < files.Count; ++i)
                     {
                         if (_dataManager.ShouldCancel)
                         {
                             break;
                         }
 
-                        await UploadFile(parentId, fileNames, i);
+                        await UploadFile(parentId, files, i);
                     }
                 }
 
                 Status.Content = "Готов";
 
-                fileNames = _dataManager.GetFailedFiles();
-                if (fileNames.Count == 0)
+                files = _dataManager.GetFailedFiles();
+                if (files.Count == 0)
                 {
                     MessageBox.Show("Все файлы загружены успешно", "OK", MessageBoxButton.OK, MessageBoxImage.Information);
                     break;
@@ -128,7 +125,7 @@ namespace CustomUploader
                     break;
                 }
 
-                _dataManager.RemoveFiles(_dataManager.FileStatuses.Keys.Except(fileNames).ToList());
+                _dataManager.RemoveFiles(_dataManager.FileStatuses.Keys.Except(files).ToList());
                 _dataManager.ShouldCancel = false;
                 ButtonCancel.IsEnabled = true;
                 SyncStackPanel();
@@ -154,13 +151,15 @@ namespace CustomUploader
 
         private void AddFolder(string path)
         {
-            TextBox.Text = path;
-            AddFiles(Directory.EnumerateFiles(path));
-        }
+            var directoryInfo = new DirectoryInfo(path);
+            if (!directoryInfo.Exists)
+            {
+                return;
+            }
 
-        private void AddFiles(IEnumerable<string> files)
-        {
-            _dataManager.AddFiles(files);
+            TextBoxPath.Text = directoryInfo.Parent?.FullName ?? "";
+            TextBoxName.Text = directoryInfo.Name;
+            _dataManager.AddFiles(directoryInfo.EnumerateFiles());
             SyncStackPanel();
         }
 
@@ -168,16 +167,16 @@ namespace CustomUploader
         {
             StackPanel.Children.RemoveRange(0, StackPanel.Children.Count);
 
-            foreach (Grid grid in _dataManager.FileStatuses.Keys.Select(CreateElement))
+            foreach (Grid grid in _dataManager.FileStatuses.Keys.Select(f => CreateElement(f.Name)))
             {
                 StackPanel.Children.Add(grid);
             }
         }
 
-        private async Task UploadFile(string parentId, IReadOnlyList<string> fileNames, int index)
+        private async Task UploadFile(string parentId, IReadOnlyList<FileInfo> files, int index)
         {
-            string file = fileNames[index];
-            Status.Content = $"Загружаю файлы ({index + 1}/{fileNames.Count})";
+            FileInfo file = files[index];
+            Status.Content = $"Загружаю файлы ({index + 1}/{files.Count})";
             _currentProgressBar = GetProgressBar(file);
             bool success = await _dataManager.UploadFile(file, parentId, 10, UpdateBar);
             _dataManager.FileStatuses[file] = success;
@@ -210,10 +209,10 @@ namespace CustomUploader
             return grid;
         }
 
-        private ProgressBar GetProgressBar(string fileName)
+        private ProgressBar GetProgressBar(FileSystemInfo file)
         {
             return
-                StackPanel.Children.Cast<Grid>().Where(grid => ((TextBlock) grid.Children[1]).Text == fileName)
+                StackPanel.Children.Cast<Grid>().Where(grid => ((TextBlock) grid.Children[1]).Text == file.Name)
                                                 .Select(grid => (ProgressBar) grid.Children[0])
                                                 .FirstOrDefault();
         }
