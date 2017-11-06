@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -34,18 +35,10 @@ namespace CustomUploader
             _dataManager.Dispose();
         }
 
-        private void StackPanelDragEnter(object sender, DragEventArgs e)
-        {
-            if (e.Data.GetDataPresent(DataFormats.FileDrop, false))
-            {
-                e.Effects = DragDropEffects.All;
-            }
-        }
-
-        private void StackPanelDrop(object sender, DragEventArgs e)
+        private void ScrollViewerDrop(object sender, DragEventArgs e)
         {
             var files = (string[])e.Data.GetData(DataFormats.FileDrop);
-            AddFiles(files);
+            AddFiles(files?.Where(File.Exists));
         }
 
         private void ButtonAdd_Click(object sender, RoutedEventArgs e)
@@ -156,7 +149,7 @@ namespace CustomUploader
         {
             StackPanel.Children.RemoveRange(0, StackPanel.Children.Count);
 
-            foreach (Grid grid in _dataManager.FileStatuses.Keys.Select(CreateElement))
+            foreach (Grid grid in _dataManager.FileStatuses.Keys.OrderBy(k => k).Select(CreateElement))
             {
                 StackPanel.Children.Add(grid);
             }
