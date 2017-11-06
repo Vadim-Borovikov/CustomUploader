@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using CustomUploader.Logic;
-using Microsoft.Win32;
 
 namespace CustomUploader
 {
@@ -34,32 +34,38 @@ namespace CustomUploader
             _dataManager.Dispose();
         }
 
-        private void StackPanelDragEnter(object sender, DragEventArgs e)
+        private void ScrollViewerDragEnter(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(DataFormats.FileDrop, false))
-            {
-                e.Effects = DragDropEffects.All;
-            }
+            e.Effects = DragDropEffects.None;
         }
 
-        private void StackPanelDrop(object sender, DragEventArgs e)
+        private void ScrollViewerDrop(object sender, DragEventArgs e)
         {
             var files = (string[])e.Data.GetData(DataFormats.FileDrop);
-            AddFiles(files);
-        }
-
-        private void ButtonAdd_Click(object sender, RoutedEventArgs e)
-        {
-            var openFileDialog = new OpenFileDialog
-            {
-                Multiselect = true
-            };
-            if (openFileDialog.ShowDialog() != true)
+            if ((files == null) || (files.Length != 1))
             {
                 return;
             }
 
-            AddFiles(openFileDialog.FileNames);
+            string path = files[0];
+            if (Directory.Exists(path))
+            {
+                AddFolder(path);
+            }
+        }
+
+        private void ButtonSet_Click(object sender, RoutedEventArgs e)
+        {
+            using (var dialog = new System.Windows.Forms.FolderBrowserDialog())
+            {
+                if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK)
+                {
+                    return;
+                }
+
+                _dataManager.FileStatuses.Clear();
+                AddFolder(dialog.SelectedPath);
+            }
         }
 
         private void ButtonClear_Click(object sender, RoutedEventArgs e)
@@ -73,7 +79,7 @@ namespace CustomUploader
         {
             _dataManager.ShouldCancel = false;
 
-            string name = TextBox.Text;
+            string name = Path.GetFileName(TextBox.Text);
             if (string.IsNullOrWhiteSpace(name))
             {
                 MessageBox.Show("Введите название!");
@@ -140,10 +146,16 @@ namespace CustomUploader
 
         private void LockButtons(bool shouldLock)
         {
-            ButtonAdd.IsEnabled = !shouldLock;
+            ButtonSet.IsEnabled = !shouldLock;
             ButtonClear.IsEnabled = !shouldLock;
             ButtonUpload.IsEnabled = !shouldLock;
             ButtonCancel.IsEnabled = shouldLock;
+        }
+
+        private void AddFolder(string path)
+        {
+            TextBox.Text = path;
+            AddFiles(Directory.EnumerateFiles(path));
         }
 
         private void AddFiles(IEnumerable<string> files)
