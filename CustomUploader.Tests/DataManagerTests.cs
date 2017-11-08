@@ -34,15 +34,12 @@ namespace CustomUploader.Tests
         [TestMethod]
         public void GetTimepadEvents()
         {
-            using (var dataManager = new DataManager("client_secret.json", ParentFolderId, null))
-            {
-                Task<List<Event>> task =
-                    DataManager.GetTimepadEvents(DateTime.Now.AddDays(-7), DateTime.Now, "https://api.timepad.ru",
-                                                 "/v1/events", 1235);
-                List<Event> events = task.Result;
-                Assert.IsNotNull(events);
-                Assert.AreNotSame(0, events.Count);
-            }
+            Task<List<Event>> task =
+                DataManager.GetTimepadEvents(DateTime.Now.AddDays(-7), DateTime.Now, "https://api.timepad.ru",
+                                                "/v1/events", 1235);
+            List<Event> events = task.Result;
+            Assert.IsNotNull(events);
+            Assert.AreNotSame(0, events.Count);
         }
 
         [TestMethod]
