@@ -11,7 +11,7 @@ namespace CustomUploader.Tests
         [TestMethod]
         public void CreateFolderTest()
         {
-            using (var provider = new DataManager("client_secret.json", ParentFolderId))
+            using (var provider = new DataManager("client_secret.json", ParentFolderId, null))
             {
                 string id = provider.GetOrCreateFolder("Test").Result;
                 Console.WriteLine(id);
@@ -21,7 +21,7 @@ namespace CustomUploader.Tests
         [TestMethod]
         public void GetFolderTest()
         {
-            using (var provider = new DataManager("client_secret.json", ParentFolderId))
+            using (var provider = new DataManager("client_secret.json", ParentFolderId, null))
             {
                 string id = provider.GetOrCreateFolder("Test").Result;
                 Assert.AreEqual(FolderId, id);
@@ -54,7 +54,7 @@ namespace CustomUploader.Tests
 
         private static void UploadFileTest(string path)
         {
-            using (var provider = new DataManager("client_secret.json", ParentFolderId))
+            using (var provider = new DataManager("client_secret.json", ParentFolderId, null))
             {
                 bool success = provider.UploadFile(new FileInfo(path), FolderId, 10, null).Result;
                 Assert.IsTrue(success);

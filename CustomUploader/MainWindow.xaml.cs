@@ -23,10 +23,35 @@ namespace CustomUploader
 
             string clientSecretPath = ConfigurationManager.AppSettings.Get("clientSecretPath");
             string parentId = ConfigurationManager.AppSettings.Get("parentId");
-            _dataManager = new DataManager(clientSecretPath, parentId);
+            _downloadPath = ConfigurationManager.AppSettings.Get("downloadPath");
+            _dataManager = new DataManager(clientSecretPath, parentId, OnDriveConnected);
 
             LockButtons(false);
             Status.Content = "Готов";
+        }
+
+        private void OnDriveConnected(string driveName)
+        {
+            var source = new DirectoryInfo(driveName);
+            List<DirectoryInfo> directories = source.EnumerateDirectories()
+                                                    .Where(n => n.Name != "System Volume Information")
+                                                    .ToList();
+            if (directories.Count != 1)
+            {
+                return;
+            }
+            source = directories.Single();
+
+            string targetName = DateTime.Now.ToString("yyyy.MM.dd-HH.mm.ss");
+            string targetPath = Path.Combine(_downloadPath, targetName);
+            var target = new DirectoryInfo(targetPath);
+
+            if (MessageBox.Show($"Перенести всё из {source.FullName} в {target.FullName}?", "Обнаружено устройство", MessageBoxButton.YesNo) != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            DataManager.MoveFolder(source, target);
         }
 
         private void WindowClosing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -221,5 +246,6 @@ namespace CustomUploader
 
         private ProgressBar _currentProgressBar;
         private readonly DataManager _dataManager;
+        private readonly string _downloadPath;
     }
 }

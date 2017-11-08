@@ -5,12 +5,13 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using Microsoft.VisualBasic.FileIO;
 
 namespace CustomUploader.Logic
 {
     public class DataManager : IDisposable
     {
-        public DataManager(string clientSecretJson, string parentId)
+        public DataManager(string clientSecretJson, string parentId, Action<string> onDriveConnected)
         {
             FileStatuses = new Dictionary<FileInfo, bool>();
             ShouldCancel = false;
@@ -24,11 +25,19 @@ namespace CustomUploader.Logic
 
                 _provider = new GoogleApisDriveProvider(stream, credentialPath, "user", CancellationToken.None);
             }
+
+            _deviceInsertListener = new DeviceInsertListener(onDriveConnected);
         }
 
         public void Dispose()
         {
             _provider.Dispose();
+            _deviceInsertListener.Dispose();
+        }
+
+        public static void MoveFolder(DirectoryInfo source, DirectoryInfo target)
+        {
+            FileSystem.MoveDirectory(source.FullName, target.FullName, UIOption.AllDialogs);
         }
 
         public void AddFiles(IEnumerable<FileInfo> files)
@@ -105,5 +114,6 @@ namespace CustomUploader.Logic
         private readonly string _parentId;
         public readonly Dictionary<FileInfo, bool> FileStatuses;
         private readonly GoogleApisDriveProvider _provider;
+        private readonly DeviceInsertListener _deviceInsertListener;
     }
 }
