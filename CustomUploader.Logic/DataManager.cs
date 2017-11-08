@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using CustomUploader.Logic.Timepad.Data;
 using Microsoft.VisualBasic.FileIO;
 
 namespace CustomUploader.Logic
@@ -92,6 +93,20 @@ namespace CustomUploader.Logic
 
                 return await _provider.UploadFile(file.Name, mimeType, parentId, stream, progress, shouldAbort);
             }
+        }
+
+        public static async Task<List<Event>> GetTimepadEvents(DateTime startsAtMin, DateTime startsAtMax, string baseUrl,
+                                                               string resource, int organizationId)
+        {
+            var parameters = new Dictionary<string, object>
+            {
+                { "organization_ids", new[] { organizationId } },
+                // { "limit", 10 },
+                { "starts_at_min", startsAtMin },
+                { "starts_at_max", startsAtMax }
+            };
+            Data data = await RestSharpProvider.ExecuteGetTaskAsync<Data>(baseUrl, resource, parameters);
+            return data?.Values;
         }
 
         private bool ShouldAbort(int currentTry, int maxTries)

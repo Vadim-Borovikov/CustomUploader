@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using CustomUploader.Logic;
+using CustomUploader.Logic.Timepad.Data;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace CustomUploader.Tests
@@ -11,9 +14,9 @@ namespace CustomUploader.Tests
         [TestMethod]
         public void CreateFolderTest()
         {
-            using (var provider = new DataManager("client_secret.json", ParentFolderId, null))
+            using (var dataManager = new DataManager("client_secret.json", ParentFolderId, null))
             {
-                string id = provider.GetOrCreateFolder("Test").Result;
+                string id = dataManager.GetOrCreateFolder("Test").Result;
                 Console.WriteLine(id);
             }
         }
@@ -21,10 +24,24 @@ namespace CustomUploader.Tests
         [TestMethod]
         public void GetFolderTest()
         {
-            using (var provider = new DataManager("client_secret.json", ParentFolderId, null))
+            using (var dataManager = new DataManager("client_secret.json", ParentFolderId, null))
             {
-                string id = provider.GetOrCreateFolder("Test").Result;
+                string id = dataManager.GetOrCreateFolder("Test").Result;
                 Assert.AreEqual(FolderId, id);
+            }
+        }
+
+        [TestMethod]
+        public void GetTimepadEvents()
+        {
+            using (var dataManager = new DataManager("client_secret.json", ParentFolderId, null))
+            {
+                Task<List<Event>> task =
+                    DataManager.GetTimepadEvents(DateTime.Now.AddDays(-7), DateTime.Now, "https://api.timepad.ru",
+                                                 "/v1/events", 1235);
+                List<Event> events = task.Result;
+                Assert.IsNotNull(events);
+                Assert.AreNotSame(0, events.Count);
             }
         }
 
