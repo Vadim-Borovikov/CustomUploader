@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading.Tasks;
 using CustomUploader.Logic;
 using CustomUploader.Logic.Timepad.Data;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -16,7 +15,7 @@ namespace CustomUploader.Tests
         {
             using (var dataManager = new DataManager("client_secret.json", ParentFolderId, null))
             {
-                string id = dataManager.GetOrCreateFolder("Test").Result;
+                string id = dataManager.GetOrCreateFolder("Test");
                 Console.WriteLine(id);
             }
         }
@@ -26,7 +25,7 @@ namespace CustomUploader.Tests
         {
             using (var dataManager = new DataManager("client_secret.json", ParentFolderId, null))
             {
-                string id = dataManager.GetOrCreateFolder("Test").Result;
+                string id = dataManager.GetOrCreateFolder("Test");
                 Assert.AreEqual(FolderId, id);
             }
         }
@@ -34,10 +33,7 @@ namespace CustomUploader.Tests
         [TestMethod]
         public void GetTimepadEvents()
         {
-            Task<List<Event>> task =
-                DataManager.GetTimepadEvents(DateTime.Now.AddDays(-7), DateTime.Now, "https://api.timepad.ru",
-                                                "/v1/events", 1235);
-            List<Event> events = task.Result;
+            List<Event> events = DataManager.GetTimepadEvents(53244, DateTime.Now.AddDays(-7), DateTime.Now);
             Assert.IsNotNull(events);
             Assert.AreNotSame(0, events.Count);
         }
@@ -70,13 +66,13 @@ namespace CustomUploader.Tests
         {
             using (var provider = new DataManager("client_secret.json", ParentFolderId, null))
             {
-                bool success = provider.UploadFile(new FileInfo(path), FolderId, 10, null).Result;
-                Assert.IsTrue(success);
+                long? id = provider.UploadFile(new FileInfo(path), FolderId, 10, null);
+                Assert.IsNotNull(id);
             }
         }
 
         private const string ParentFolderId = "0B1IWpTUgXs1xaUI4bDA2WWFlSFU";
-        private const string FolderId = "0B1IWpTUgXs1xZzBDUTV6eFBIT1U";
+        private const string FolderId = "1u7TF8ZtLdHsT1jwesSNrWTngvGB0yFge";
 
         private const string EmptyFilePath = "D:/Test/empty.txt";
         private const string TextFilePath = "D:/Test/text.txt";

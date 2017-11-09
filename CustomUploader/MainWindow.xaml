@@ -29,5 +29,6 @@
         <StatusBar  Height="23" VerticalAlignment="Bottom">
             <StatusBarItem Name="Status" Content=""/>
         </StatusBar>
+        <Button x:Name="ButtonTest" Content="Тест" HorizontalAlignment="Left" Margin="90,0,0,28" Width="75" Height="22" VerticalAlignment="Bottom" Click="ButtonTest_Click"/>
     </Grid>
 </Window>

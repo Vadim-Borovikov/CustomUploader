@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Web;
 using CustomUploader.Logic.Timepad.Data;
 using Microsoft.VisualBasic.FileIO;
+using RestSharp;
 
 namespace CustomUploader.Logic
 {
@@ -30,15 +30,43 @@ namespace CustomUploader.Logic
             _deviceInsertListener = new DeviceInsertListener(onDriveConnected);
         }
 
+        public void StartWatch()
+        {
+            _deviceInsertListener.StartWatch();
+        }
+
+        public void StopWatch()
+        {
+            _deviceInsertListener.StopWatch();
+        }
+
+        public static DateTime GetMinLastWriteTime(DirectoryInfo source)
+        {
+            return source.EnumerateFiles().Min(f => f.LastWriteTime);
+        }
+
+        public static List<DirectoryInfo> EnumerateDriveFolders(string driveName)
+        {
+            var source = new DirectoryInfo(driveName);
+            return source.EnumerateDirectories().Where(n => n.Name != "System Volume Information").ToList();
+        }
+
         public void Dispose()
         {
             _provider.Dispose();
             _deviceInsertListener.Dispose();
         }
 
-        public static void MoveFolder(DirectoryInfo source, DirectoryInfo target)
+        public static void MoveFolder(FileSystemInfo source, DirectoryInfo target)
         {
             FileSystem.MoveDirectory(source.FullName, target.FullName, UIOption.AllDialogs);
+            List<FileInfo> files = target.EnumerateFiles().ToList();
+            foreach (FileInfo file in files)
+            {
+                string newName = $"{file.LastWriteTime:yyyy-MM-dd HH_mm}{file.Extension}";
+                string newPath = Path.Combine(file.DirectoryName ?? "", newName);
+                file.MoveTo(newPath);
+            }
         }
 
         public void AddFiles(IEnumerable<FileInfo> files)
@@ -62,9 +90,9 @@ namespace CustomUploader.Logic
             return FileStatuses.Where(p => !p.Value).Select(p => p.Key).ToList();
         }
 
-        public async Task<string> GetOrCreateFolder(string name)
+        public string GetOrCreateFolder(string name)
         {
-            IEnumerable<string> foldersIds = await _provider.GetFoldersIds(name, _parentId);
+            IEnumerable<string> foldersIds = _provider.GetFoldersIds(name, _parentId);
             List<string> foldersIdsList = foldersIds.ToList();
 
             if (foldersIdsList.Count == 1)
@@ -72,14 +100,14 @@ namespace CustomUploader.Logic
                 return foldersIdsList.First();
             }
 
-            return await _provider.CreateFolder(name, _parentId);
+            return _provider.CreateFolder(name, _parentId);
         }
 
-        public async Task<bool> UploadFile(FileInfo file, string parentId, int maxTries, Action<float> progressHandler)
+        public long? UploadFile(FileInfo file, string parentId, int maxTries, Action<float> progressHandler)
         {
             if (!file.Exists)
             {
-                return false;
+                return null;
             }
 
             using (FileStream stream = file.Open(FileMode.Open, FileAccess.Read))
@@ -91,21 +119,20 @@ namespace CustomUploader.Logic
 
                 Func<int, bool> shouldAbort = currentTry => ShouldAbort(currentTry, maxTries);
 
-                return await _provider.UploadFile(file.Name, mimeType, parentId, stream, progress, shouldAbort);
+                return _provider.UploadFile(file.Name, mimeType, parentId, stream, progress, shouldAbort);
             }
         }
 
-        public static async Task<List<Event>> GetTimepadEvents(DateTime startsAtMin, DateTime startsAtMax, string baseUrl,
-                                                               string resource, int organizationId)
+        public static List<Event> GetTimepadEvents(int organizationId, DateTime startsAtMin, DateTime startsAtMax)
         {
             var parameters = new Dictionary<string, object>
             {
-                { "organization_ids", new[] { organizationId } },
-                // { "limit", 10 },
+                { "organization_ids", organizationId },
                 { "starts_at_min", startsAtMin },
                 { "starts_at_max", startsAtMax }
             };
-            Data data = await RestSharpProvider.ExecuteGetTaskAsync<Data>(baseUrl, resource, parameters);
+            var data =
+                RestSharpProvider.Execute<Data>("https://api.timepad.ru", "/v1/events", DataFormat.Json, parameters);
             return data?.Values;
         }
 

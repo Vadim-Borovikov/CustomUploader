@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Management;
-using System.Text;
 
 namespace CustomUploader.Logic
 {
@@ -19,9 +18,18 @@ namespace CustomUploader.Logic
                 Query = new WqlEventQuery("SELECT * FROM Win32_VolumeChangeEvent WHERE EventType = 2")
             };
             _watcher.EventArrived += WatcherOnEventArrived;
-            _watcher.Start();
 
             _onDriveConnected = onDriveConnected;
+        }
+
+        public void StartWatch()
+        {
+            _watcher.Start();
+        }
+
+        public void StopWatch()
+        {
+            _watcher.Stop();
         }
 
         private void WatcherOnEventArrived(object sender, EventArrivedEventArgs e)
