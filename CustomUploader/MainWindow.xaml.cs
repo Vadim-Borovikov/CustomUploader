@@ -29,10 +29,16 @@ namespace CustomUploader
             _dataManager = new DataManager(clientSecretPath, parentId, OnDriveConnectedInvoker);
 
             int timepadHours = int.Parse(ConfigurationManager.AppSettings.Get("timepadHours"));
-            _timepadLookup = TimeSpan.FromHours(timepadHours);
+            _timepadLookupTime = TimeSpan.FromHours(timepadHours);
 
             int deviceDateWarningDays = int.Parse(ConfigurationManager.AppSettings.Get("deviceDateWarningDays"));
-            _deviceDateWarningMonths = TimeSpan.FromDays(deviceDateWarningDays);
+            _deviceDateWarningTime = TimeSpan.FromDays(deviceDateWarningDays);
+
+            _deviceFolders =
+                ConfigurationManager.AppSettings.Get("deviceFolders").Split(';').ToList();
+
+            _firstDeviceLetter =
+                ConfigurationManager.AppSettings.Get("firstDeviceLetter").Single();
 
             _organizationId = int.Parse(ConfigurationManager.AppSettings.Get("organizationId"));
 
@@ -44,8 +50,11 @@ namespace CustomUploader
 
         private async Task<bool> MoveFromDevice(FileSystemInfo source, DirectoryInfo target)
         {
-            if (MessageBox.Show($"Перенести всё из {source.FullName} в {target.FullName}?",
-                    "Обнаружено устройство", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+            MessageBoxResult res =
+                MessageBox.Show($"Перенести всё из {source.FullName} в {target.FullName}?",
+                                "Обнаружено устройство",
+                                MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (res != MessageBoxResult.Yes)
             {
                 return false;
             }
@@ -62,103 +71,132 @@ namespace CustomUploader
 
         private async void OnDriveConnected(string driveName)
         {
+            await ProcessDrive(driveName, true);
+        }
+
+        private async Task<bool> ProcessDrive(string driveName, bool foldersNotFoundReport)
+        {
+            bool processed = false;
+
             _dataManager.StopWatch();
             LockButtons(true, true);
-            Status.Content = "Обнаружено устройство. Анализ папок";
 
-            List<DirectoryInfo> sourceFolders = await Task.Run(() => DataManager.EnumerateDriveFolders(driveName));
-            switch (sourceFolders.Count)
+            DirectoryInfo source = await GetSource(driveName, foldersNotFoundReport);
+            if (source != null)
             {
-                case 0:
-                    MessageBox.Show("На устройстве не обнаружено папок", "Обнаружено устройство", MessageBoxButton.OK,
-                                    MessageBoxImage.Warning);
-                    break;
-                case 1:
-                    DirectoryInfo source = sourceFolders.Single();
-                    _localFolder = null;
-                    Status.Content = "Обнаружено устройство. Анализ файлов";
-                    DateTime earliest = await Task.Run(() => DataManager.GetMinLastWriteTime(source));
-                    DateTime now = DateTime.Now;
-                    TimeSpan passed = now - earliest;
-                    if (passed <= _timepadLookup)
-                    {
-                        // Timepad
-                        Status.Content = "Обнаружено устройство. Анализ событий Timepad";
-                        List<Event> events = await Task.Run(() =>
-                            DataManager.GetTimepadEvents(_organizationId, earliest - _timepadLookup, earliest));
-                        Event e;
-                        switch (events.Count)
-                        {
-                            case 0:
-                                // Lost
-                                Status.Content = "Обнаружено устройство. Подходящие события не найдены";
-                                _localFolder = await MoveFromDeviceToLost(source, now);
-                                break;
-                            case 1:
-                                e = events.Single();
-                                _localFolder = await MoveFromDeviceToEvent(e, source);
-                                break;
-                            default:
-                                var selectionWindow = new SelectionWindow(events);
-                                selectionWindow.ShowDialog();
-                                e = events.FirstOrDefault(x => x.Id == selectionWindow.SelectedId);
-                                if (e != null)
-                                {
-                                    _localFolder = await MoveFromDeviceToEvent(e, source);
-                                }
-                                break;
-                        }
-                    }
-                    else
-                    {
-                        if (passed >= _deviceDateWarningMonths)
-                        {
-                            MessageBox.Show($"На устройстве обнаружен файл с датой изменения {earliest:dd.MM.yyyy}. Проверьте настройки устройства.",
-                                            "Обнаружено устройство", MessageBoxButton.OK, MessageBoxImage.Warning);
-                        }
+                processed = true;
 
-                        // Lost
-                        _localFolder = await MoveFromDeviceToLost(source, now);
-                    }
+                DirectoryInfo target = await DetectTarget(source);
+                if (target != null)
+                {
+                    bool moved = await MoveFromDevice(source, target);
+                    _localFolder = moved ? target : null;
 
                     Status.Content = "Готов";
                     if (_localFolder != null)
                     {
                         AddFolder();
-                        if (MessageBox.Show("Всё готово к загрузке на Google Диск. Приступить?", "OK",
-                                MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                        MessageBoxResult res =
+                            MessageBox.Show("Всё готово к загрузке на Google Диск. Приступить?",
+                                            "OK",
+                                            MessageBoxButton.YesNo, MessageBoxImage.Question);
+                        if (res == MessageBoxResult.Yes)
                         {
                             await Upload();
                         }
                     }
-                    break;
-                default:
-                    MessageBox.Show("На устройстве обнаружено более одной папки", "Обнаружено устройство",
-                                    MessageBoxButton.OK, MessageBoxImage.Warning);
-                    break;
+                }
             }
 
             _dataManager.StartWatch();
             LockButtons(false, true);
             Status.Content = "Готов";
+            return processed;
         }
 
-        private async Task<DirectoryInfo> MoveFromDeviceToEvent(Event e, FileSystemInfo source)
+        private async Task<DirectoryInfo> GetSource(string driveName, bool foldersNotFoundReport)
         {
-            string targetName = $"{e.StartsAt:yyyy-MM-dd} {e.Name.Replace(":", " -")}";
-            string targetPath = Path.Combine(_downloadPath, targetName);
-            var target = new DirectoryInfo(targetPath);
-            bool moved = await MoveFromDevice(source, target);
-            return moved ? target : null;
+            Status.Content = "Обнаружено устройство. Анализ папок";
+
+            string path =
+                await Task.Run(() => _deviceFolders.Select(p => Path.Combine(driveName, p))
+                                                  .FirstOrDefault(Directory.Exists));
+            if (path != null)
+            {
+                return new DirectoryInfo(path);
+            }
+
+            if (foldersNotFoundReport)
+            {
+                MessageBox.Show("На устройстве не обнаружено ожидаемых папок",
+                                "Обнаружено устройство",
+                                MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            return null;
         }
 
-        private async Task<DirectoryInfo> MoveFromDeviceToLost(FileSystemInfo source, DateTime now)
+        private async Task<DateTime?> GetMinLastWriteTime(DirectoryInfo source)
         {
+            Status.Content = "Обнаружено устройство. Анализ файлов";
+
+            DateTime? earliest = await Task.Run(() => DataManager.GetMinLastWriteTime(source));
+
+            if (!earliest.HasValue)
+            {
+                MessageBox.Show("На устройстве не обнаружено файлов", "Обнаружено устройство",
+                                MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            return earliest;
+        }
+
+        private async Task<Event> GetTimepadEvent(DateTime earliest)
+        {
+            Status.Content = "Обнаружено устройство. Анализ событий Timepad";
+
+            List<Event> events = await Task.Run(() =>
+                DataManager.GetTimepadEvents(_organizationId, earliest - _timepadLookupTime, earliest));
+            switch (events.Count)
+            {
+                case 0:
+                    Status.Content = "Обнаружено устройство. Подходящие события не найдены";
+                    return null;
+                case 1:
+                    return events.Single();
+                default:
+                    var selectionWindow = new SelectionWindow(events);
+                    selectionWindow.ShowDialog();
+                    return events.FirstOrDefault(x => x.Id == selectionWindow.SelectedId);
+            }
+        }
+
+        private async Task<DirectoryInfo> DetectTarget(DirectoryInfo source)
+        {
+            DateTime? earliest = await GetMinLastWriteTime(source);
+            if (!earliest.HasValue)
+            {
+                return null;
+            }
+
+            DateTime now = DateTime.Now;
+            TimeSpan passed = now - earliest.Value;
+            string parentPath = _lostPath;
             string targetName = now.ToString("yyyy-MM-dd");
-            string targetPath = Path.Combine(_lostPath, targetName);
-            var target = new DirectoryInfo(targetPath);
-            bool moved = await MoveFromDevice(source, target);
-            return moved ? target : null;
+            if (passed <= _timepadLookupTime)
+            {
+                Event e = await GetTimepadEvent(earliest.Value);
+                parentPath = _downloadPath;
+                targetName = $"{e.StartsAt:yyyy-MM-dd} {e.Name.Replace(":", " -")}";
+            }
+
+            if (passed >= _deviceDateWarningTime)
+            {
+                MessageBox.Show(
+                    $"На устройстве обнаружен файл с датой изменения {earliest:dd.MM.yyyy}. Проверьте настройки устройства.",
+                    "Обнаружено устройство", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+
+            string targetPath = Path.Combine(parentPath, targetName);
+            return new DirectoryInfo(targetPath);
         }
 
         private void WindowClosing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -217,14 +255,16 @@ namespace CustomUploader
             string name = TextBoxName.Text;
             if (string.IsNullOrWhiteSpace(name))
             {
-                MessageBox.Show("Введите название!", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Введите название!", "Ошибка",
+                                MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
             List<FileInfo> files = _dataManager.FileStatuses.Keys.ToList();
             if (files.Count == 0)
             {
-                MessageBox.Show("Выберите файлы для загрузки!", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Выберите файлы для загрузки!", "Ошибка",
+                                MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
@@ -252,10 +292,12 @@ namespace CustomUploader
                 Status.Content = "Готов";
 
                 files = _dataManager.GetFailedFiles();
+                MessageBoxResult res;
                 if (files.Count == 0)
                 {
-                    if (MessageBox.Show("Все файлы загружены успешно. Удалить их папку с компьютера?", "OK",
-                            MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                    res = MessageBox.Show("Все файлы загружены успешно. Удалить их папку с компьютера?",
+                                          "OK", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                    if (res == MessageBoxResult.Yes)
                     {
                         _localFolder.Delete(true);
                         Clear();
@@ -263,8 +305,9 @@ namespace CustomUploader
                     break;
                 }
 
-                if (MessageBox.Show("Некоторые файлы загрузить не удалось. Попытаться загрузить их ещё раз?", "Ошибка",
-                                    MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                res = MessageBox.Show("Некоторые файлы загрузить не удалось. Попытаться загрузить их ещё раз?",
+                                      "Ошибка", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                if (res != MessageBoxResult.Yes)
                 {
                     break;
                 }
@@ -276,6 +319,35 @@ namespace CustomUploader
             }
 
             _dataManager.StartWatch();
+            LockButtons(false, true);
+        }
+
+        private async void ButtonScan_Click(object sender, RoutedEventArgs e)
+        {
+            LockButtons(true, true);
+            bool found = false;
+
+            for (char c = _firstDeviceLetter; c <= 'Z'; ++c)
+            {
+                string path = $"{c}:";
+                if (!Directory.Exists(path))
+                {
+                    continue;
+                }
+
+                found = await ProcessDrive(path, false);
+                if (found)
+                {
+                    break;
+                }
+            }
+
+            if (!found)
+            {
+                MessageBox.Show("Не обнаружено устройств с ожидаемыми папками", "Не удалось",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+
             LockButtons(false, true);
         }
 
@@ -300,6 +372,7 @@ namespace CustomUploader
             ButtonSet.IsEnabled = !shouldLock;
             ButtonClear.IsEnabled = !shouldLock;
             ButtonUpload.IsEnabled = !shouldLock;
+            ButtonScan.IsEnabled = !shouldLock;
             ButtonCancel.IsEnabled = !shouldLockCancel;
 
             UpdateUI();
@@ -323,8 +396,8 @@ namespace CustomUploader
             List<FileInfo> files = _localFolder.EnumerateFiles().ToList();
             if (!files.Any())
             {
-                MessageBox.Show($"Папка {_localFolder.FullName} не содержит файлов!", "Ошибка", MessageBoxButton.OK,
-                                MessageBoxImage.Error);
+                MessageBox.Show($"Папка {_localFolder.FullName} не содержит файлов!", "Ошибка",
+                                MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
@@ -398,13 +471,10 @@ namespace CustomUploader
         private readonly DataManager _dataManager;
         private readonly string _downloadPath;
         private readonly string _lostPath;
-        private readonly TimeSpan _timepadLookup;
-        private readonly TimeSpan _deviceDateWarningMonths;
+        private readonly TimeSpan _timepadLookupTime;
+        private readonly TimeSpan _deviceDateWarningTime;
         private readonly int _organizationId;
-
-        private void ButtonTest_Click(object sender, RoutedEventArgs e)
-        {
-            OnDriveConnectedInvoker("F:");
-        }
+        private readonly List<string> _deviceFolders;
+        private readonly char _firstDeviceLetter;
     }
 }
