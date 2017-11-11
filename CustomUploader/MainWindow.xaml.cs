@@ -23,6 +23,14 @@ namespace CustomUploader
             Status.Content = "Загрузка...";
 
             string clientSecretPath = ConfigurationManager.AppSettings.Get("clientSecretPath");
+            if (!File.Exists(clientSecretPath))
+            {
+                MessageBox.Show($"Файл {clientSecretPath} не найден! Программа будет закрыта",
+                                "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                Close();
+                return;
+            }
+
             string parentId = ConfigurationManager.AppSettings.Get("parentId");
             _downloadPath = ConfigurationManager.AppSettings.Get("downloadPath");
             _lostPath = ConfigurationManager.AppSettings.Get("lostPath");
@@ -201,7 +209,7 @@ namespace CustomUploader
 
         private void WindowClosing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            _dataManager.Dispose();
+            _dataManager?.Dispose();
         }
 
         private void ScrollViewerDrop(object sender, DragEventArgs e)
