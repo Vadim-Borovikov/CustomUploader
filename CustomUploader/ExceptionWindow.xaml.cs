@@ -13,6 +13,8 @@ namespace CustomUploader
         {
             InitializeComponent();
 
+            Label.Content = exception.Message;
+
             TextBox.Text = GetExceptionText(exception);
         }
 
@@ -32,7 +34,7 @@ namespace CustomUploader
 
             sb.AppendLine($"{prefix}{e.Message}");
             sb.AppendLine($"{prefix}StackTrace:");
-            sb.AppendLine($"{prefix}{e.StackTrace.Replace("\n", $"\n{prefix}")}");
+            sb.AppendLine($"{prefix}{e.StackTrace.Replace(Environment.NewLine, $"{Environment.NewLine}{prefix}")}");
             if (e.InnerException == null)
             {
                 return sb.ToString();
