@@ -238,6 +238,7 @@ namespace CustomUploader
 
                 _dataManager.FileStatuses.Clear();
                 AddFolder(dialog.SelectedPath);
+                LockButtons(false, true);
             }
         }
 
