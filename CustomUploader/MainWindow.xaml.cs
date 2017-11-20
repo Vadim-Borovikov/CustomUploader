@@ -18,19 +18,13 @@ namespace CustomUploader
     {
         public MainWindow()
         {
+            AppDomain.CurrentDomain.UnhandledException += OnException;
+
             InitializeComponent();
 
             Status.Content = "Загрузка...";
 
             string clientSecretPath = ConfigurationManager.AppSettings.Get("clientSecretPath");
-            if (!File.Exists(clientSecretPath))
-            {
-                MessageBox.Show($"Файл {clientSecretPath} не найден! Программа будет закрыта",
-                                "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
-                Close();
-                return;
-            }
-
             string parentId = ConfigurationManager.AppSettings.Get("parentId");
             _downloadPath = ConfigurationManager.AppSettings.Get("downloadPath");
             _lostPath = ConfigurationManager.AppSettings.Get("lostPath");
@@ -54,6 +48,15 @@ namespace CustomUploader
 
             LockButtons(false, true);
             Status.Content = "Готов";
+        }
+
+        private void OnException(object sender, UnhandledExceptionEventArgs args)
+        {
+            var e = (Exception)args.ExceptionObject;
+            var exceptionWindow = new ExceptionWindow(e.InnerException ?? e);
+            exceptionWindow.ShowDialog();
+
+            Close();
         }
 
         private async Task<bool> MoveFromDevice(FileSystemInfo source, DirectoryInfo target)
@@ -209,6 +212,7 @@ namespace CustomUploader
 
         private void WindowClosing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            AppDomain.CurrentDomain.UnhandledException -= OnException;
             _dataManager?.Dispose();
         }
 
