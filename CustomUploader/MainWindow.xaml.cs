@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Windows;
@@ -7,6 +8,7 @@ using System.Windows.Controls;
 using CustomUploader.Logic;
 using CustomUploader.Logic.Timepad.Data;
 using System.Threading.Tasks;
+using System.Windows.Navigation;
 
 namespace CustomUploader
 {
@@ -27,6 +29,10 @@ namespace CustomUploader
             _dataManager = new DataManager(_configurationProvider.ClientSecret.FullName,
                 _configurationProvider.ParentId, OnDriveConnectedInvoker);
             _dataManager.StartWatch();
+
+            Hyperlink.NavigateUri =
+                new Uri($"https://drive.google.com/drive/u/0/folders/{_configurationProvider.ParentId}");
+
             LockButtons(false, true);
             Status.Content = "Готов";
         }
@@ -322,6 +328,11 @@ namespace CustomUploader
 
             _dataManager.StartWatch();
             LockButtons(false, true);
+        }
+
+        private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
+        {
+            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri));
         }
 
         private async void ButtonScan_Click(object sender, RoutedEventArgs e)

@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="Custom Uploader" Height="310" Width="370" MinHeight="310" MinWidth="370" x:ClassModifier="internal" Closing="WindowClosing" ScrollViewer.CanContentScroll="True">
+        Title="Custom Uploader" Height="314" Width="370" MinHeight="314" MinWidth="370" x:ClassModifier="internal" Closing="WindowClosing" ScrollViewer.CanContentScroll="True">
     <Grid>
         <Label Content="Путь" HorizontalAlignment="Left" Margin="38,12,0,0" VerticalAlignment="Top"/>
         <TextBox Name="TextBoxPath" Height="23" Margin="78,12,90,0" VerticalAlignment="Top" IsEnabled="False" MaxLines="1"/>
@@ -12,7 +12,7 @@
         <Label Content="Название" HorizontalAlignment="Left" Margin="10,38,0,0" VerticalAlignment="Top"/>
         <TextBox x:Name="TextBoxName" Height="23" Margin="78,40,90,0" VerticalAlignment="Top" IsEnabled="False" MaxLines="1"/>
         <Button Name="ButtonClear" Content="Очистить" Margin="0,40,10,0" HorizontalAlignment="Right" Width="75" Click="ButtonClear_Click" Height="22" VerticalAlignment="Top"/>
-        <ScrollViewer Margin="10,69,10,55" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" AllowDrop="True" Drop="ScrollViewerDrop">
+        <ScrollViewer Margin="10,69,10,86" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" AllowDrop="True" Drop="ScrollViewerDrop">
             <StackPanel Name="StackPanel">
                 <!--Grid Width="Auto">
                     <ProgressBar/>
@@ -24,6 +24,11 @@
                 </Grid-->
             </StackPanel>
         </ScrollViewer>
+        <Label HorizontalAlignment="Left" Margin="10,0,0,55" Height="26" VerticalAlignment="Bottom">
+            <Hyperlink Name="Hyperlink" RequestNavigate="Hyperlink_RequestNavigate">
+                Открыть папку на Google Диске
+            </Hyperlink>
+        </Label>
         <Button Name="ButtonScan" Content="Просканировать устройства" HorizontalAlignment="Left" Margin="10,0,0,28" Width="172" Height="22" VerticalAlignment="Bottom" Click="ButtonScan_Click"/>
         <Button Name="ButtonUpload" Content="Закачать" HorizontalAlignment="Left" Margin="187,0,0,28" Width="75" Height="22" VerticalAlignment="Bottom" Click="ButtonUpload_Click"/>
         <Button Name="ButtonCancel" Content="Отменить" Margin="0,0,10,28" HorizontalAlignment="Right" Width="75" Height="22" VerticalAlignment="Bottom" IsCancel="True" Click="ButtonCancel_Click"/>
