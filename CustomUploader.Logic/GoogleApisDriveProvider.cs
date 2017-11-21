@@ -49,7 +49,8 @@ namespace CustomUploader.Logic
 
         internal IEnumerable<string> GetFoldersIds(string name, string parentId)
         {
-            return GetFilesIds(name, FolderType, parentId);
+            IEnumerable<File> files = GetFiles(FolderType, name, parentId);
+            return files.Where(f => f.Name == name).Select(f => f.Id);
         }
 
         internal string CreateFolder(string name, string parentId)
@@ -99,20 +100,28 @@ namespace CustomUploader.Logic
             return true;
         }
 
-        private IEnumerable<string> GetFilesIds(string name, string mimeType, string parentId)
+        private IEnumerable<File> GetFiles(string mimeType, string containsName, string parentId)
         {
             FilesResource.ListRequest request = _driveService.Files.List();
-            request.Q = $"name contains '{name}' and mimeType='{mimeType}' and trashed = false";
+            request.Q = $"mimeType='{mimeType}' and trashed = false";
+            if (containsName != null)
+            {
+                request.Q = $" and name contains '{containsName}'";
+            }
             if (parentId != null)
             {
                 request.Q += $" and '{parentId}' in parents";
             }
-            request.PageSize = 10;
             request.Fields = "nextPageToken, files(id, name)";
-
-            FileList result = request.Execute();
-
-            return result.Files.Where(f => f.Name == name).Select(f => f.Id);
+            do
+            {
+                FileList result = request.Execute();
+                foreach (File file in result.Files)
+                {
+                    yield return file;
+                }
+                request.PageToken = result.NextPageToken;
+            } while (!string.IsNullOrEmpty(request.PageToken));
         }
     }
 }
