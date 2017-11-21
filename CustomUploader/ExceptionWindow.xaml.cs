@@ -22,26 +22,26 @@ namespace CustomUploader
         {
             var sb = new StringBuilder();
 
+            sb.AppendLine($"{prefix}{e.GetType()}: {e.Message}");
+            sb.AppendLine($"{prefix}StackTrace:");
+            sb.AppendLine($"{prefix}{e.StackTrace.Replace(Environment.NewLine, $"{Environment.NewLine}{prefix}")}");
+
             var aggregateException = e as AggregateException;
             if (aggregateException != null)
             {
                 foreach (Exception ex in aggregateException.InnerExceptions)
                 {
-                    sb.Append(GetExceptionText(ex, prefix));
+                    sb.Append(GetExceptionText(ex, $"\t{prefix}"));
                 }
                 return sb.ToString();
             }
 
-            sb.AppendLine($"{prefix}{e.Message}");
-            sb.AppendLine($"{prefix}StackTrace:");
-            sb.AppendLine($"{prefix}{e.StackTrace.Replace(Environment.NewLine, $"{Environment.NewLine}{prefix}")}");
-            if (e.InnerException == null)
+            if (e.InnerException != null)
             {
-                return sb.ToString();
+                sb.AppendLine($"{prefix}InnerException:");
+                sb.Append(GetExceptionText(e.InnerException, $"\t{prefix}"));
             }
 
-            sb.AppendLine($"{prefix}InnerException:");
-            sb.Append(GetExceptionText(e.InnerException, $"\t{prefix}"));
             return sb.ToString();
         }
 
