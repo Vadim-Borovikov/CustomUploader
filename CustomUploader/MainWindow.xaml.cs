@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.Windows;
@@ -24,30 +23,19 @@ namespace CustomUploader
 
             Status.Content = "Загрузка...";
 
-            string clientSecretPath = ConfigurationManager.AppSettings.Get("clientSecretPath");
-            string parentId = ConfigurationManager.AppSettings.Get("parentId");
-            _downloadPath = ConfigurationManager.AppSettings.Get("downloadPath");
-            _lostPath = ConfigurationManager.AppSettings.Get("lostPath");
-            _dataManager = new DataManager(clientSecretPath, parentId, OnDriveConnectedInvoker);
-
-            int timepadHours = int.Parse(ConfigurationManager.AppSettings.Get("timepadHours"));
-            _timepadLookupTime = TimeSpan.FromHours(timepadHours);
-
-            int deviceDateWarningDays = int.Parse(ConfigurationManager.AppSettings.Get("deviceDateWarningDays"));
-            _deviceDateWarningTime = TimeSpan.FromDays(deviceDateWarningDays);
-
-            _deviceFolders =
-                ConfigurationManager.AppSettings.Get("deviceFolders").Split(';').ToList();
-
-            _firstDeviceLetter =
-                ConfigurationManager.AppSettings.Get("firstDeviceLetter").Single();
-
-            _organizationId = int.Parse(ConfigurationManager.AppSettings.Get("organizationId"));
-
+            _configurationProvider = new ConfigurationProvider(s => Dispatcher.Invoke(() => OnConfigsError(s)));
+            _dataManager = new DataManager(_configurationProvider.ClientSecret.FullName,
+                _configurationProvider.ParentId, OnDriveConnectedInvoker);
             _dataManager.StartWatch();
-
             LockButtons(false, true);
             Status.Content = "Готов";
+        }
+
+        private void OnConfigsError(string text)
+        {
+            MessageBox.Show($"{text}.{Environment.NewLine}Программа будет закрыта.", "Error",
+                            MessageBoxButton.OK, MessageBoxImage.Error);
+            Close();
         }
 
         private void OnException(object sender, UnhandledExceptionEventArgs args)
@@ -130,8 +118,8 @@ namespace CustomUploader
             Status.Content = "Обнаружено устройство. Анализ папок";
 
             string path =
-                await Task.Run(() => _deviceFolders.Select(p => Path.Combine(driveName, p))
-                                                  .FirstOrDefault(Directory.Exists));
+                await Task.Run(() => _configurationProvider.DeviceFolders.Select(p => Path.Combine(driveName, p))
+                                                                         .FirstOrDefault(Directory.Exists));
             if (path != null)
             {
                 return new DirectoryInfo(path);
@@ -165,7 +153,8 @@ namespace CustomUploader
             Status.Content = "Обнаружено устройство. Анализ событий Timepad";
 
             List<Event> events = await Task.Run(() =>
-                DataManager.GetTimepadEvents(_organizationId, earliest - _timepadLookupTime, earliest));
+                DataManager.GetTimepadEvents(_configurationProvider.OrganizationId,
+                                             earliest - _configurationProvider.TimepadLookupTime, earliest));
             switch (events.Count)
             {
                 case 0:
@@ -190,23 +179,23 @@ namespace CustomUploader
 
             DateTime now = DateTime.Now;
             TimeSpan passed = now - earliest.Value;
-            string parentPath = _lostPath;
+            DirectoryInfo parent = _configurationProvider.Lost;
             string targetName = now.ToString("yyyy-MM-dd");
-            if (passed <= _timepadLookupTime)
+            if (passed <= _configurationProvider.TimepadLookupTime)
             {
                 Event e = await GetTimepadEvent(earliest.Value);
-                parentPath = _downloadPath;
+                parent = _configurationProvider.Download;
                 targetName = $"{e.StartsAt:yyyy-MM-dd} {e.Name.Replace(":", " -")}";
             }
 
-            if (passed >= _deviceDateWarningTime)
+            if (passed >= _configurationProvider.DeviceDateWarningTime)
             {
                 MessageBox.Show(
                     $"На устройстве обнаружен файл с датой изменения {earliest:dd.MM.yyyy}. Проверьте настройки устройства.",
                     "Обнаружено устройство", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
 
-            string targetPath = Path.Combine(parentPath, targetName);
+            string targetPath = Path.Combine(parent.FullName, targetName);
             return new DirectoryInfo(targetPath);
         }
 
@@ -340,7 +329,7 @@ namespace CustomUploader
             LockButtons(true, true);
             bool found = false;
 
-            for (char c = _firstDeviceLetter; c <= 'Z'; ++c)
+            for (char c = _configurationProvider.FirstDeviceLetter; c <= 'Z'; ++c)
             {
                 string path = $"{c}:";
                 if (!Directory.Exists(path))
@@ -482,12 +471,6 @@ namespace CustomUploader
 
         private ProgressBar _currentProgressBar;
         private readonly DataManager _dataManager;
-        private readonly string _downloadPath;
-        private readonly string _lostPath;
-        private readonly TimeSpan _timepadLookupTime;
-        private readonly TimeSpan _deviceDateWarningTime;
-        private readonly int _organizationId;
-        private readonly List<string> _deviceFolders;
-        private readonly char _firstDeviceLetter;
+        private readonly ConfigurationProvider _configurationProvider;
     }
 }
