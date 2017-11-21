@@ -12,7 +12,7 @@ namespace CustomUploader.Tests
         {
             using (var provider = new DataManager("client_secret.json", ParentFolderId))
             {
-                string id = provider.GetOrCreateFolder("Test").Result;
+                string id = provider.GetOrCreateFolder("Test");
                 Console.WriteLine(id);
             }
         }
@@ -22,7 +22,7 @@ namespace CustomUploader.Tests
         {
             using (var provider = new DataManager("client_secret.json", ParentFolderId))
             {
-                string id = provider.GetOrCreateFolder("Test").Result;
+                string id = provider.GetOrCreateFolder("Test");
                 Assert.AreEqual(FolderId, id);
             }
         }
@@ -55,7 +55,7 @@ namespace CustomUploader.Tests
         {
             using (var provider = new DataManager("client_secret.json", ParentFolderId))
             {
-                bool success = provider.UploadFile(path, FolderId, 10, null).Result;
+                bool success = provider.UploadFile(path, FolderId, 10, null);
                 Assert.IsTrue(success);
             }
         }

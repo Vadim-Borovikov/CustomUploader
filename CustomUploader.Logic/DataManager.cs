@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Web;
 
 namespace CustomUploader.Logic
@@ -52,9 +51,9 @@ namespace CustomUploader.Logic
             return FileStatuses.Where(p => !p.Value).Select(p => p.Key).ToList();
         }
 
-        public async Task<string> GetOrCreateFolder(string name)
+        public string GetOrCreateFolder(string name)
         {
-            IEnumerable<string> foldersIds = await _provider.GetFoldersIds(name, _parentId);
+            IEnumerable<string> foldersIds = _provider.GetFoldersIds(name, _parentId);
             List<string> foldersIdsList = foldersIds.ToList();
 
             if (foldersIdsList.Count == 1)
@@ -62,10 +61,10 @@ namespace CustomUploader.Logic
                 return foldersIdsList.First();
             }
 
-            return await _provider.CreateFolder(name, _parentId);
+            return _provider.CreateFolder(name, _parentId);
         }
 
-        public async Task<bool> UploadFile(string path, string parentId, int maxTries, Action<float> progressHandler)
+        public bool UploadFile(string path, string parentId, int maxTries, Action<float> progressHandler)
         {
             if (!File.Exists(path))
             {
@@ -82,7 +81,7 @@ namespace CustomUploader.Logic
 
                 Func<int, bool> shouldAbort = currentTry => ShouldAbort(currentTry, maxTries);
 
-                return await _provider.UploadFile(name, mimeType, parentId, stream, progress, shouldAbort);
+                return _provider.UploadFile(name, mimeType, parentId, stream, progress, shouldAbort);
             }
         }
 

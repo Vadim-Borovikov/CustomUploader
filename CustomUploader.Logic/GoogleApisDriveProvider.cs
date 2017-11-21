@@ -47,12 +47,12 @@ namespace CustomUploader.Logic
             _driveService.Dispose();
         }
 
-        internal async Task<IEnumerable<string>> GetFoldersIds(string name, string parentId)
+        internal IEnumerable<string> GetFoldersIds(string name, string parentId)
         {
-            return await GetFilesIds(name, FolderType, parentId);
+            return GetFilesIds(name, FolderType, parentId);
         }
 
-        internal async Task<string> CreateFolder(string name, string parentId)
+        internal string CreateFolder(string name, string parentId)
         {
             var body = new File
             {
@@ -62,13 +62,13 @@ namespace CustomUploader.Logic
             };
             FilesResource.CreateRequest createRequest = _driveService.Files.Create(body);
 
-            File result = await createRequest.ExecuteAsync();
+            File result = createRequest.Execute();
 
             return result.Id;
         }
 
-        internal async Task<bool> UploadFile(string name, string mimeType, string parentId, Stream fileStream,
-                                             IProgress<long> progress, Func<int, bool> shouldAbort)
+        internal bool UploadFile(string name, string mimeType, string parentId, Stream fileStream,
+                                 IProgress<long> progress, Func<int, bool> shouldAbort)
         {
             var fileMetadata = new File
             {
@@ -84,7 +84,7 @@ namespace CustomUploader.Logic
                 request.ProgressChanged += u => progress.Report(u.BytesSent);
             }
 
-            IUploadProgress uploadProgress = await request.UploadAsync();
+            IUploadProgress uploadProgress = request.Upload();
 
             int currentTry = 0;
             while (uploadProgress.Status != UploadStatus.Completed)
@@ -94,12 +94,12 @@ namespace CustomUploader.Logic
                     return false;
                 }
                 ++currentTry;
-                await request.ResumeAsync();
+                request.Resume();
             }
             return true;
         }
 
-        private async Task<IEnumerable<string>> GetFilesIds(string name, string mimeType, string parentId)
+        private IEnumerable<string> GetFilesIds(string name, string mimeType, string parentId)
         {
             FilesResource.ListRequest request = _driveService.Files.List();
             request.Q = $"name contains '{name}' and mimeType='{mimeType}' and trashed = false";
@@ -110,7 +110,7 @@ namespace CustomUploader.Logic
             request.PageSize = 10;
             request.Fields = "nextPageToken, files(id, name)";
 
-            FileList result = await request.ExecuteAsync();
+            FileList result = request.Execute();
 
             return result.Files.Where(f => f.Name == name).Select(f => f.Id);
         }

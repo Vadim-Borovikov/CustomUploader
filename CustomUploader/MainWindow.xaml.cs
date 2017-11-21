@@ -83,7 +83,7 @@ namespace CustomUploader
             LockButtons(true);
 
             Status.Content = $"Ищу/cоздаю папку {name}";
-            string parentId = await _dataManager.GetOrCreateFolder(name);
+            string parentId = await Task.Run(() => _dataManager.GetOrCreateFolder(name));
 
             while (true)
             {
@@ -160,9 +160,14 @@ namespace CustomUploader
             string file = fileNames[index];
             Status.Content = $"Загружаю файлы ({index + 1}/{fileNames.Count})";
             _currentProgressBar = GetProgressBar(file);
-            bool success = await _dataManager.UploadFile(file, parentId, 10, UpdateBar);
+            bool success = await Task.Run(() => _dataManager.UploadFile(file, parentId, 10, UpdateBarInvoker));
             _dataManager.FileStatuses[file] = success;
             _currentProgressBar.Value = success ? 100 : 0;
+        }
+
+        private void UpdateBarInvoker(float val)
+        {
+            Dispatcher.Invoke(() => UpdateBar(val));
         }
 
         private void UpdateBar(float val)
