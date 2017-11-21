@@ -55,8 +55,16 @@ namespace CustomUploader
 
         private async Task<bool> MoveFromDevice(FileSystemInfo source, DirectoryInfo target)
         {
+            string messagePrefix = "";
+            if (_outdatedFile != null)
+            {
+                messagePrefix =
+                    $"На устройстве обнаружен файл {_outdatedFile.FullName} с датой изменения {_outdatedFile.LastWriteTime:dd.MM.yyyy}.{Environment.NewLine}";
+                _outdatedFile = null;
+            }
+
             MessageBoxResult res =
-                MessageBox.Show($"Перенести всё из {source.FullName} в {target.FullName}?",
+                MessageBox.Show($"{messagePrefix}Перенести всё из {source.FullName} в {target.FullName}?",
                                 "Обнаружено устройство",
                                 MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (res != MessageBoxResult.Yes)
@@ -64,7 +72,7 @@ namespace CustomUploader
                 return false;
             }
 
-            Status.Content = "Обнаружено устройство. Перенос";
+            Status.Content = "Обнаружено устройство. Перенос...";
             await Task.Run(() => DataManager.MoveFolder(source, target));
             return true;
         }
@@ -121,7 +129,7 @@ namespace CustomUploader
 
         private async Task<DirectoryInfo> GetSource(string driveName, bool foldersNotFoundReport)
         {
-            Status.Content = "Обнаружено устройство. Анализ папок";
+            Status.Content = "Обнаружено устройство. Анализ папок...";
 
             string path =
                 await Task.Run(() => _configurationProvider.DeviceFolders.Select(p => Path.Combine(driveName, p))
@@ -140,13 +148,13 @@ namespace CustomUploader
             return null;
         }
 
-        private async Task<DateTime?> GetMinLastWriteTime(DirectoryInfo source)
+        private async Task<FileInfo> GetMinLastWriteTimeFile(DirectoryInfo source)
         {
-            Status.Content = "Обнаружено устройство. Анализ файлов";
+            Status.Content = "Обнаружено устройство. Анализ файлов...";
 
-            DateTime? earliest = await Task.Run(() => DataManager.GetMinLastWriteTime(source));
+            FileInfo earliest = await Task.Run(() => DataManager.GetMinLastWriteTimeFile(source));
 
-            if (!earliest.HasValue)
+            if (earliest == null)
             {
                 MessageBox.Show("На устройстве не обнаружено файлов", "Обнаружено устройство",
                                 MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -156,7 +164,7 @@ namespace CustomUploader
 
         private async Task<Event> GetTimepadEvent(DateTime earliest)
         {
-            Status.Content = "Обнаружено устройство. Анализ событий Timepad";
+            Status.Content = "Обнаружено устройство. Анализ событий Timepad...";
 
             List<Event> events = await Task.Run(() =>
                 DataManager.GetTimepadEvents(_configurationProvider.OrganizationId,
@@ -177,21 +185,26 @@ namespace CustomUploader
 
         private async Task<DirectoryInfo> DetectTarget(DirectoryInfo source)
         {
-            DateTime? earliest = await GetMinLastWriteTime(source);
-            if (!earliest.HasValue)
+            FileInfo file = await GetMinLastWriteTimeFile(source);
+            if (file == null)
             {
                 return null;
             }
 
+            DateTime earliest = file.LastWriteTime;
             DateTime now = DateTime.Now;
-            TimeSpan passed = now - earliest.Value;
+            TimeSpan passed = now - earliest;
             DirectoryInfo parent = _configurationProvider.Lost;
             string targetName = now.ToString("yyyy-MM-dd");
             if (passed <= _configurationProvider.TimepadLookupTime)
             {
-                Event e = await GetTimepadEvent(earliest.Value);
+                Event e = await GetTimepadEvent(earliest);
                 parent = _configurationProvider.Download;
                 targetName = $"{e.StartsAt:yyyy-MM-dd} {e.Name.Replace(":", " -")}";
+            }
+            else
+            {
+                _outdatedFile = file;
             }
 
             if (passed >= _configurationProvider.DeviceDateWarningTime)
@@ -279,7 +292,7 @@ namespace CustomUploader
             _dataManager.StopWatch();
             LockButtons(true, false);
 
-            Status.Content = $"Ищу/cоздаю папку {name}";
+            Status.Content = $"Ищу/cоздаю папку {name}...";
             string parentId = await Task.Run(() => _dataManager.GetOrCreateFolder(name));
 
             while (true)
@@ -433,7 +446,7 @@ namespace CustomUploader
         private async Task UploadFile(string parentId, IReadOnlyList<FileInfo> files, int index)
         {
             FileInfo file = files[index];
-            Status.Content = $"Загружаю файлы ({index + 1}/{files.Count})";
+            Status.Content = $"Загружаю файлы ({index + 1}/{files.Count})...";
             _currentProgressBar = GetProgressBar(file);
             long? size = await Task.Run(() => _dataManager.UploadFile(file, parentId, 10, UpdateBarInvoker));
             bool success = size.HasValue && (size.Value == file.Length);
@@ -480,6 +493,7 @@ namespace CustomUploader
                                                 .FirstOrDefault();
         }
 
+        private FileInfo _outdatedFile;
         private ProgressBar _currentProgressBar;
         private readonly DataManager _dataManager;
         private readonly ConfigurationProvider _configurationProvider;

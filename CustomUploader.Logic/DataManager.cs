@@ -40,9 +40,9 @@ namespace CustomUploader.Logic
             _deviceInsertListener.StopWatch();
         }
 
-        public static DateTime? GetMinLastWriteTime(DirectoryInfo source)
+        public static FileInfo GetMinLastWriteTimeFile(DirectoryInfo source)
         {
-            return source.EnumerateFiles().Min(f => f?.LastWriteTime);
+            return source.EnumerateFiles().OrderBy(f => f?.LastWriteTime).FirstOrDefault();
         }
 
         public void Dispose()
