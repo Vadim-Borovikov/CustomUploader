@@ -110,7 +110,7 @@ namespace CustomUploader.Logic
             request.Q = $"mimeType='{mimeType}' and trashed = false";
             if (containsName != null)
             {
-                request.Q = $" and name contains '{containsName}'";
+                request.Q += $" and name contains '{containsName}'";
             }
             if (parentId != null)
             {
