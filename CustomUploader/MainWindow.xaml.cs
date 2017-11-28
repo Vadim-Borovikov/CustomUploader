@@ -199,8 +199,11 @@ namespace CustomUploader
             if (passed <= _configurationProvider.TimepadLookupTime)
             {
                 Event e = await GetTimepadEvent(earliest);
-                parent = _configurationProvider.Download;
-                targetName = $"{e.StartsAt:yyyy-MM-dd} {e.Name.Replace(":", " -")}";
+                if (e != null)
+                {
+                    parent = _configurationProvider.Download;
+                    targetName = $"{e.StartsAt:yyyy-MM-dd} {e.Name.Replace(":", " -")}";
+                }
             }
             else
             {
