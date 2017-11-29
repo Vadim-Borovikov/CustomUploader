@@ -87,12 +87,7 @@ namespace CustomUploader.Logic
             IEnumerable<string> foldersIds = _provider.GetFoldersIds(name, _parentId);
             List<string> foldersIdsList = foldersIds.ToList();
 
-            if (foldersIdsList.Count == 1)
-            {
-                return foldersIdsList.First();
-            }
-
-            return _provider.CreateFolder(name, _parentId);
+            return foldersIdsList.Count == 1 ? foldersIdsList.First() : _provider.CreateFolder(name, _parentId);
         }
 
         public long? UploadFile(FileInfo file, string parentId, int maxTries, Action<float> progressHandler)
@@ -109,9 +104,9 @@ namespace CustomUploader.Logic
                 long size = stream.Length;
                 var progress = new Progress<long>(bytesSent => HandleProgress(bytesSent, size, progressHandler));
 
-                Func<int, bool> shouldAbort = currentTry => ShouldAbort(currentTry, maxTries);
+                bool Abort(int currentTry) => ShouldAbort(currentTry, maxTries);
 
-                return _provider.UploadFile(file.Name, mimeType, parentId, stream, progress, shouldAbort);
+                return _provider.UploadFile(file.Name, mimeType, parentId, stream, progress, Abort);
             }
         }
 
@@ -119,8 +114,6 @@ namespace CustomUploader.Logic
         {
             return ShouldCancel || (currentTry >= maxTries);
         }
-
-        public bool ShouldCancel;
 
         private static void HandleProgress(long bytesSent, long size, Action<float> progressHandler)
         {
@@ -132,8 +125,9 @@ namespace CustomUploader.Logic
             progressHandler(progress);
         }
 
-        private readonly string _parentId;
+        public bool ShouldCancel;
         public readonly Dictionary<FileInfo, bool> FileStatuses;
+        private readonly string _parentId;
         private readonly GoogleApisDriveProvider _provider;
         private readonly DeviceInsertListener _deviceInsertListener;
     }
