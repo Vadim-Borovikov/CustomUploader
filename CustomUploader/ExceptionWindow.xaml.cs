@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Text;
 using System.Windows;
+using Newtonsoft.Json;
 
 namespace CustomUploader
 {
@@ -9,40 +9,16 @@ namespace CustomUploader
     /// </summary>
     internal partial class ExceptionWindow
     {
-        public ExceptionWindow(Exception exception)
+        public ExceptionWindow(Exception exception, ConfigurationProvider configurationProvider, string source,
+                               string target)
         {
             InitializeComponent();
 
             Label.Content = exception.Message;
 
-            TextBox.Text = GetExceptionText(exception);
-        }
+            var report = new ExceptionReport(exception, configurationProvider, source, target);
 
-        private static string GetExceptionText(Exception e, string prefix = "")
-        {
-            var sb = new StringBuilder();
-
-            sb.AppendLine($"{prefix}{e.GetType()}: {e.Message}");
-            sb.AppendLine($"{prefix}StackTrace:");
-            sb.AppendLine($"{prefix}{e.StackTrace.Replace(Environment.NewLine, $"{Environment.NewLine}{prefix}")}");
-
-            var aggregateException = e as AggregateException;
-            if (aggregateException != null)
-            {
-                foreach (Exception ex in aggregateException.InnerExceptions)
-                {
-                    sb.Append(GetExceptionText(ex, $"\t{prefix}"));
-                }
-                return sb.ToString();
-            }
-
-            if (e.InnerException != null)
-            {
-                sb.AppendLine($"{prefix}InnerException:");
-                sb.Append(GetExceptionText(e.InnerException, $"\t{prefix}"));
-            }
-
-            return sb.ToString();
+            TextBox.Text = JsonConvert.SerializeObject(report);
         }
 
         private void ButtonCopyAndClose_Click(object sender, RoutedEventArgs e)

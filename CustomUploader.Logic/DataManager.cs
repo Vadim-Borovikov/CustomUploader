@@ -125,6 +125,16 @@ namespace CustomUploader.Logic
             progressHandler(progress);
         }
 
+        public string GetParentGoogleDriveUrl()
+        {
+            return GetGoogleDriveUrl(_parentId);
+        }
+
+        public static string GetGoogleDriveUrl(string folderId)
+        {
+            return $"https://drive.google.com/drive/u/0/folders/{folderId}";
+        }
+
         public bool ShouldCancel;
         public readonly Dictionary<FileInfo, bool> FileStatuses;
         private readonly string _parentId;

@@ -2,19 +2,26 @@
 using System.Configuration;
 using System.IO;
 using System.Linq;
+using Newtonsoft.Json;
 
 namespace CustomUploader
 {
-    internal class ConfigurationProvider
+    public class ConfigurationProvider
     {
-        internal readonly FileInfo ClientSecret;
-        internal readonly string ParentId;
-        internal readonly DirectoryInfo Download;
-        internal readonly TimeSpan DeviceDateWarningTime;
-        internal readonly string[] DeviceFolders;
-        internal readonly char FirstDeviceLetter;
+        [JsonProperty]
+        public readonly FileInfo ClientSecret;
+        [JsonProperty]
+        public readonly string ParentId;
+        [JsonProperty]
+        public readonly DirectoryInfo Download;
+        [JsonProperty]
+        public readonly TimeSpan DeviceDateWarningTime;
+        [JsonProperty]
+        public readonly string[] DeviceFolders;
+        [JsonProperty]
+        public readonly char FirstDeviceLetter;
 
-        internal ConfigurationProvider(Action<string> onError)
+        public ConfigurationProvider(Action<string> onError = null)
         {
             _onError = onError;
 
@@ -63,7 +70,7 @@ namespace CustomUploader
             string setting = ConfigurationManager.AppSettings.Get(key);
             if (setting == null)
             {
-                _onError($"{key} не задан в настройках");
+                _onError?.Invoke($"{key} не задан в настройках");
             }
             return setting;
         }
@@ -82,7 +89,7 @@ namespace CustomUploader
                 return info;
             }
 
-            _onError($"Не найден файл {info.FullName}");
+            _onError?.Invoke($"Не найден файл {info.FullName}");
             return null;
         }
 
@@ -100,7 +107,7 @@ namespace CustomUploader
                 return info;
             }
 
-            _onError($"Не найдена папка {info.FullName}");
+            _onError?.Invoke($"Не найдена папка {info.FullName}");
             return null;
         }
 
@@ -118,7 +125,7 @@ namespace CustomUploader
                 return result;
             }
 
-            _onError($"Некорректное значение настройки {key}. Ожидается целое число");
+            _onError?.Invoke($"Некорректное значение настройки {key}. Ожидается целое число");
             return null;
         }
 
@@ -132,7 +139,7 @@ namespace CustomUploader
 
             if (setting.Length != 1)
             {
-                _onError($"Некорректное значение настройки {key}. Ожидается символ");
+                _onError?.Invoke($"Некорректное значение настройки {key}. Ожидается символ");
             }
 
             return setting.Single();

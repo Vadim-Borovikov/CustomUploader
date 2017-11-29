@@ -29,8 +29,8 @@ namespace CustomUploader
                 _configurationProvider.ParentId, OnDriveConnectedInvoker);
             _dataManager.StartWatch();
 
-            Hyperlink.NavigateUri =
-                new Uri($"https://drive.google.com/drive/u/0/folders/{_configurationProvider.ParentId}");
+            string url = DataManager.GetGoogleDriveUrl(_configurationProvider.ParentId);
+            Hyperlink.NavigateUri = new Uri(url);
 
             LockButtons(false, true);
             Status.Content = "Готов";
@@ -46,7 +46,7 @@ namespace CustomUploader
         private void OnException(object sender, UnhandledExceptionEventArgs args)
         {
             var e = (Exception)args.ExceptionObject;
-            var exceptionWindow = new ExceptionWindow(e.InnerException ?? e);
+            var exceptionWindow = new ExceptionWindow(e, _configurationProvider, _currentSource, _currentTarget);
             exceptionWindow.ShowDialog();
 
             Close();
@@ -54,7 +54,10 @@ namespace CustomUploader
 
         private async Task<bool> MoveFromDevice(FileSystemInfo source, DirectoryInfo target)
         {
-            MessageBoxResult res = MessageBox.Show($"Перенести всё из {source.FullName} в {target.FullName}?",
+            _currentSource = source.FullName;
+            _currentTarget = target.FullName;
+
+            MessageBoxResult res = MessageBox.Show($"Перенести всё из {_currentSource} в {_currentTarget}?",
                                                    "Обнаружено устройство",
                                                    MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (res != MessageBoxResult.Yes)
@@ -100,8 +103,7 @@ namespace CustomUploader
                     {
                         AddFolder();
                         MessageBoxResult res =
-                            MessageBox.Show("Всё готово к загрузке на Google Диск. Приступить?",
-                                            "OK",
+                            MessageBox.Show("Всё готово к загрузке на Google Диск. Приступить?", "OK",
                                             MessageBoxButton.YesNo, MessageBoxImage.Question);
                         if (res == MessageBoxResult.Yes)
                         {
@@ -228,6 +230,9 @@ namespace CustomUploader
 
         private async Task Upload()
         {
+            _currentSource = _localFolder.FullName;
+            _currentTarget = null;
+
             _dataManager.ShouldCancel = false;
 
             string name = TextBoxName.Text;
@@ -251,6 +256,7 @@ namespace CustomUploader
 
             Status.Content = $"Ищу/cоздаю папку {name}...";
             string parentId = await Task.Run(() => _dataManager.GetOrCreateFolder(name));
+            _currentTarget = _dataManager.GetParentGoogleDriveUrl();
 
             while (true)
             {
@@ -367,8 +373,6 @@ namespace CustomUploader
             AddFolder();
         }
 
-        private DirectoryInfo _localFolder;
-
         private void AddFolder()
         {
             if (!_localFolder.Exists)
@@ -450,6 +454,9 @@ namespace CustomUploader
                                                 .FirstOrDefault();
         }
 
+        private DirectoryInfo _localFolder;
+        private string _currentSource;
+        private string _currentTarget;
         private ProgressBar _currentProgressBar;
         private readonly DataManager _dataManager;
         private readonly ConfigurationProvider _configurationProvider;
