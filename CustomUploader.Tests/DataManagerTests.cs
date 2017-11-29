@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using CustomUploader.Logic;
-using CustomUploader.Logic.Timepad.Data;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace CustomUploader.Tests
@@ -31,14 +29,6 @@ namespace CustomUploader.Tests
         }
 
         [TestMethod]
-        public void GetTimepadEvents()
-        {
-            List<Event> events = DataManager.GetTimepadEvents(53244, DateTime.Now.AddDays(-7), DateTime.Now);
-            Assert.IsNotNull(events);
-            Assert.AreNotSame(0, events.Count);
-        }
-
-        [TestMethod]
         public void UploadEmptyFileTest()
         {
             UploadFileTest(EmptyFilePath);
@@ -56,12 +46,6 @@ namespace CustomUploader.Tests
             UploadFileTest(AudioFilePath);
         }
 
-        [TestMethod]
-        public void UploadVideoFileTest()
-        {
-            UploadFileTest(VideoFilePath);
-        }
-
         private static void UploadFileTest(string path)
         {
             using (var provider = new DataManager("client_secret.json", ParentFolderId, null))
@@ -72,11 +56,10 @@ namespace CustomUploader.Tests
         }
 
         private const string ParentFolderId = "0B1IWpTUgXs1xaUI4bDA2WWFlSFU";
-        private const string FolderId = "1u7TF8ZtLdHsT1jwesSNrWTngvGB0yFge";
+        private const string FolderId = "1uPh_peyzr1JYEGuWwvBGxOOHaBvotzpq";
 
         private const string EmptyFilePath = "D:/Test/empty.txt";
         private const string TextFilePath = "D:/Test/text.txt";
         private const string AudioFilePath = "D:/Test/audio.mp3";
-        private const string VideoFilePath = "D:/Test/video.mkv";
     }
 }

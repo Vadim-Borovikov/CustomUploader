@@ -6,7 +6,6 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using CustomUploader.Logic;
-using CustomUploader.Logic.Timepad.Data;
 using System.Threading.Tasks;
 using System.Windows.Navigation;
 
@@ -55,18 +54,9 @@ namespace CustomUploader
 
         private async Task<bool> MoveFromDevice(FileSystemInfo source, DirectoryInfo target)
         {
-            string messagePrefix = "";
-            if (_outdatedFile != null)
-            {
-                messagePrefix =
-                    $"На устройстве обнаружен файл {_outdatedFile.FullName} с датой изменения {_outdatedFile.LastWriteTime:dd.MM.yyyy}.{Environment.NewLine}";
-                _outdatedFile = null;
-            }
-
-            MessageBoxResult res =
-                MessageBox.Show($"{messagePrefix}Перенести всё из {source.FullName} в {target.FullName}?",
-                                "Обнаружено устройство",
-                                MessageBoxButton.YesNo, MessageBoxImage.Question);
+            MessageBoxResult res = MessageBox.Show($"Перенести всё из {source.FullName} в {target.FullName}?",
+                                                   "Обнаружено устройство",
+                                                   MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (res != MessageBoxResult.Yes)
             {
                 return false;
@@ -162,27 +152,6 @@ namespace CustomUploader
             return earliest;
         }
 
-        private async Task<Event> GetTimepadEvent(DateTime earliest)
-        {
-            Status.Content = "Обнаружено устройство. Анализ событий Timepad...";
-
-            List<Event> events = await Task.Run(() =>
-                DataManager.GetTimepadEvents(_configurationProvider.OrganizationId,
-                                             earliest - _configurationProvider.TimepadLookupTime, earliest));
-            switch (events.Count)
-            {
-                case 0:
-                    Status.Content = "Обнаружено устройство. Подходящие события не найдены";
-                    return null;
-                case 1:
-                    return events.Single();
-                default:
-                    var selectionWindow = new SelectionWindow(events);
-                    selectionWindow.ShowDialog();
-                    return events.FirstOrDefault(x => x.Id == selectionWindow.SelectedId);
-            }
-        }
-
         private async Task<DirectoryInfo> DetectTarget(DirectoryInfo source)
         {
             FileInfo file = await GetMinLastWriteTimeFile(source);
@@ -194,22 +163,6 @@ namespace CustomUploader
             DateTime earliest = file.LastWriteTime;
             DateTime now = DateTime.Now;
             TimeSpan passed = now - earliest;
-            DirectoryInfo parent = _configurationProvider.Lost;
-            string targetName = now.ToString("yyyy-MM-dd");
-            if (passed <= _configurationProvider.TimepadLookupTime)
-            {
-                Event e = await GetTimepadEvent(earliest);
-                if (e != null)
-                {
-                    parent = _configurationProvider.Download;
-                    targetName = $"{e.StartsAt:yyyy-MM-dd} {e.Name.Replace(":", " -")}";
-                }
-            }
-            else
-            {
-                _outdatedFile = file;
-            }
-
             if (passed >= _configurationProvider.DeviceDateWarningTime)
             {
                 MessageBox.Show(
@@ -217,7 +170,8 @@ namespace CustomUploader
                     "Обнаружено устройство", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
 
-            string targetPath = Path.Combine(parent.FullName, targetName);
+            string targetName = now.ToString("yyyy-MM-dd");
+            string targetPath = Path.Combine(_configurationProvider.Download.FullName, targetName);
             return new DirectoryInfo(targetPath);
         }
 
@@ -496,7 +450,6 @@ namespace CustomUploader
                                                 .FirstOrDefault();
         }
 
-        private FileInfo _outdatedFile;
         private ProgressBar _currentProgressBar;
         private readonly DataManager _dataManager;
         private readonly ConfigurationProvider _configurationProvider;

@@ -4,9 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Web;
-using CustomUploader.Logic.Timepad.Data;
 using Microsoft.VisualBasic.FileIO;
-using RestSharp;
 
 namespace CustomUploader.Logic
 {
@@ -115,19 +113,6 @@ namespace CustomUploader.Logic
 
                 return _provider.UploadFile(file.Name, mimeType, parentId, stream, progress, shouldAbort);
             }
-        }
-
-        public static List<Event> GetTimepadEvents(int organizationId, DateTime startsAtMin, DateTime startsAtMax)
-        {
-            var parameters = new Dictionary<string, object>
-            {
-                { "organization_ids", organizationId },
-                { "starts_at_min", startsAtMin },
-                { "starts_at_max", startsAtMax }
-            };
-            var data =
-                RestSharpProvider.Execute<Data>("https://api.timepad.ru", "/v1/events", DataFormat.Json, parameters);
-            return data?.Values;
         }
 
         private bool ShouldAbort(int currentTry, int maxTries)

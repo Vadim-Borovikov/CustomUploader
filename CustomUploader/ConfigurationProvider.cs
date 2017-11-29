@@ -10,12 +10,9 @@ namespace CustomUploader
         internal readonly FileInfo ClientSecret;
         internal readonly string ParentId;
         internal readonly DirectoryInfo Download;
-        internal readonly DirectoryInfo Lost;
-        internal readonly TimeSpan TimepadLookupTime;
         internal readonly TimeSpan DeviceDateWarningTime;
         internal readonly string[] DeviceFolders;
         internal readonly char FirstDeviceLetter;
-        internal readonly int OrganizationId;
 
         internal ConfigurationProvider(Action<string> onError)
         {
@@ -39,19 +36,6 @@ namespace CustomUploader
                 return;
             }
 
-            Lost = CheckDirectoryInfoSetting("lostPath", false);
-            if (Lost == null)
-            {
-                return;
-            }
-
-            int? timepadHours = CheckIntSetting("timepadHours");
-            if (!timepadHours.HasValue)
-            {
-                return;
-            }
-            TimepadLookupTime = TimeSpan.FromHours(timepadHours.Value);
-
             int? deviceDateWarningDays = CheckIntSetting("deviceDateWarningDays");
             if (!deviceDateWarningDays.HasValue)
             {
@@ -72,13 +56,6 @@ namespace CustomUploader
                 return;
             }
             FirstDeviceLetter = firstDeviceLetterSetting.Value;
-
-            int? organizationIdSetting = CheckIntSetting("organizationId");
-            if (!organizationIdSetting.HasValue)
-            {
-                return;
-            }
-            OrganizationId = organizationIdSetting.Value;
         }
 
         private string GetSetting(string key)
@@ -135,8 +112,7 @@ namespace CustomUploader
                 return null;
             }
 
-            int result;
-            bool success = int.TryParse(setting, out result);
+            bool success = int.TryParse(setting, out int result);
             if (success)
             {
                 return result;
