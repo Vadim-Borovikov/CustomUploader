@@ -89,7 +89,7 @@ namespace CustomUploader.Logic
             int currentTry = 0;
             while (uploadProgress.Status != UploadStatus.Completed)
             {
-                if (!shouldAbort(currentTry))
+                if (shouldAbort(currentTry))
                 {
                     return null;
                 }
