@@ -14,7 +14,7 @@ namespace CustomUploader
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
-    internal partial class MainWindow
+    internal partial class MainWindow : IPathsLogger
     {
         public MainWindow()
         {
@@ -66,8 +66,14 @@ namespace CustomUploader
             }
 
             Status.Content = "Обнаружено устройство. Перенос...";
-            await Task.Run(() => DataManager.MoveFolder(source, target));
+            await Task.Run(() => DataManager.MoveFolder(source, target, this));
             return true;
+        }
+
+        public void LogPaths(string source, string target)
+        {
+            _currentSource = source;
+            _currentTarget = target;
         }
 
         private void OnDriveConnectedInvoker(string driveName)
@@ -407,6 +413,7 @@ namespace CustomUploader
         private async Task UploadFile(string parentId, IReadOnlyList<FileInfo> files, int index)
         {
             FileInfo file = files[index];
+            _currentSource = file.FullName;
             Status.Content = $"Загружаю файлы ({index + 1}/{files.Count})...";
             _currentProgressBar = GetProgressBar(file);
             long? size = await Task.Run(() => _dataManager.UploadFile(file, parentId, 10, UpdateBarInvoker));

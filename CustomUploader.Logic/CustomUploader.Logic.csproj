@@ -94,6 +94,7 @@
     <Compile Include="DataManager.cs" />
     <Compile Include="DeviceInsertListener.cs" />
     <Compile Include="GoogleApisDriveProvider.cs" />
+    <Compile Include="IPathsLogger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

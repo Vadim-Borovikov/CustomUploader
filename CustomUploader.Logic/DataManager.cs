@@ -49,7 +49,7 @@ namespace CustomUploader.Logic
             _deviceInsertListener.Dispose();
         }
 
-        public static void MoveFolder(FileSystemInfo source, DirectoryInfo target)
+        public static void MoveFolder(FileSystemInfo source, DirectoryInfo target, IPathsLogger logger)
         {
             FileSystem.MoveDirectory(source.FullName, target.FullName, UIOption.AllDialogs);
             List<FileInfo> files = target.EnumerateFiles().ToList();
@@ -57,6 +57,7 @@ namespace CustomUploader.Logic
             {
                 string newName = $"{file.LastWriteTime:yyyy-MM-dd HH_mm}{file.Extension}";
                 string newPath = Path.Combine(file.DirectoryName ?? "", newName);
+                logger?.LogPaths(file.FullName, newPath);
                 file.MoveTo(newPath);
             }
         }
