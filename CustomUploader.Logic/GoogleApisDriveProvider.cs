@@ -89,10 +89,16 @@ namespace CustomUploader.Logic
             int currentTry = 0;
             while (uploadProgress.Status != UploadStatus.Completed)
             {
+                if (uploadProgress.Status == UploadStatus.Failed)
+                {
+                    throw uploadProgress.Exception;
+                }
+
                 if (shouldAbort(currentTry))
                 {
                     return null;
                 }
+
                 ++currentTry;
                 uploadRequest.Resume();
             }
