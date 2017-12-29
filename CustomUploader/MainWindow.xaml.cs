@@ -76,16 +76,8 @@ namespace CustomUploader
             _currentTarget = target;
         }
 
-        private void OnDriveConnectedInvoker(string driveName)
-        {
-            Dispatcher.Invoke(() => OnDriveConnected(driveName));
-        }
-
-        private async void OnDriveConnected(string driveName)
-        {
-            await ProcessDrive(driveName, true);
-        }
-
+        private void OnDriveConnectedInvoker(string driveName) => Dispatcher.Invoke(() => OnDriveConnected(driveName));
+        private async void OnDriveConnected(string driveName) => await ProcessDrive(driveName, true);
         private async Task<bool> ProcessDrive(string driveName, bool foldersNotFoundReport)
         {
             bool processed = false;
@@ -215,11 +207,7 @@ namespace CustomUploader
             }
         }
 
-        private void ButtonClear_Click(object sender, RoutedEventArgs e)
-        {
-            Clear();
-        }
-
+        private void ButtonClear_Click(object sender, RoutedEventArgs e) => Clear();
         private void Clear()
         {
             _dataManager.FileStatuses.Clear();
@@ -229,11 +217,7 @@ namespace CustomUploader
             UpdateUI();
         }
 
-        private async void ButtonUpload_Click(object sender, RoutedEventArgs e)
-        {
-            await Upload();
-        }
-
+        private async void ButtonUpload_Click(object sender, RoutedEventArgs e) => await Upload();
         private async Task Upload()
         {
             _currentSource = _localFolder.FullName;
@@ -422,14 +406,10 @@ namespace CustomUploader
             _currentProgressBar.Value = success ? 100 : 0;
         }
 
-        private void UpdateBarInvoker(float val)
-        {
-            Dispatcher.Invoke(() => UpdateBar(val));
-        }
-
+        private void UpdateBarInvoker(float val) => Dispatcher.Invoke(() => UpdateBar(val));
         private void UpdateBar(float val)
         {
-            _currentProgressBar.Value = (int)Math.Round(val * 100);
+            _currentProgressBar.Value = (int) Math.Round(val * 100);
         }
 
         private static Grid CreateElement(string name)
